@@ -1,0 +1,62 @@
+import FreeCAD
+import Part
+import math
+import uuid 
+
+def cylinders(x,y,rad):
+	name=  "A"+uuid.uuid4().hex[:6].upper()  #"cylx"+str(x)+"y"+str(y)
+	App.ActiveDocument.addObject("Part::Cylinder",name)
+	App.ActiveDocument.ActiveObject.Label = name
+	App.ActiveDocument.recompute()
+	if x>0.5*rad or y>0.5*rad:
+		sel = App.ActiveDocument.ActiveObject
+		shape = sel.Shape.copy()
+	
+		newshape = shape.copy()
+		newshape.translate(App.Vector(x,y,0))
+		newobject = FreeCAD.ActiveDocument.addObject("Part::Feature",name+'a')
+		newobject.Shape = newshape
+	
+		newshape = shape.copy()
+		newshape.translate(App.Vector(-x,y,0))
+		newobject = FreeCAD.ActiveDocument.addObject("Part::Feature",name+'b')
+		newobject.Shape = newshape
+	
+		newshape = shape.copy()
+		newshape.translate(App.Vector(-x,-y,0))
+		newobject = FreeCAD.ActiveDocument.addObject("Part::Feature",name+'c')
+		newobject.Shape = newshape
+	
+		newshape = shape.copy()
+		newshape.translate(App.Vector(x,-y,0))
+		newobject = FreeCAD.ActiveDocument.addObject("Part::Feature",name+'d')
+		newobject.Shape = newshape
+		App.ActiveDocument.removeObject(name)
+		App.ActiveDocument.recompute()
+
+
+R=25
+r=2
+g=5
+pi=2.0*math.asin(1.0)
+h=g*math.sin(pi/3.0)
+rows=int((R-r)/h)
+for i in range(0,rows):
+	y=i*h
+	maxX=math.sqrt((R-r)*(R-r) - y*y)
+	if i%2==1:
+		columns=int((0.5*g+maxX)/g)
+		if columns > 0:
+			for j in range(0, columns):
+				x=0.5*g+j*g
+				cylinders(x,y,r)
+	else:
+		columns=int((maxX)/g)
+		if columns > 0:
+			for j in range(0, columns):
+				x=j*g
+				cylinders(x,y,r)
+
+
+
+App.ActiveDocument.recompute()

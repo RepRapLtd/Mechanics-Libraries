@@ -1,0 +1,81 @@
+#
+# FreeCAD Python Macro to generate a random pattern of cylinders in a cuboid volume
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 23 November 2018
+#
+# Licence: GPL
+#
+
+import random
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+# Parameters
+
+radius = 0.5       # The radius of the cylinders
+density = 0.0005    # The expected number of cylindre centres per unit volume
+meanLength = 20  # The mean length of the cylinders
+sdLength = 8      # The standard deviation of the cylinder lengths
+
+# The box from the origin in which all the centres of the cylinders will lie
+
+xBox = 100
+yBox = 100
+zBox = 100
+
+#********************************************************************************
+
+# Generate a point from the uniform distribution over the defined box
+
+def RanBoxPoint():
+ x = random.uniform(0, xBox)
+ y = random.uniform(0, yBox)
+ z = random.uniform(0, zBox)
+ return Base.Vector(x,y,z)
+
+
+# Wrapper function for the Gaussian distribution
+# (prevents negative and zero lengths)
+
+def RanGaussianLength():
+ g = -1
+ while (g <= 0.0):
+  g = random.gauss(meanLength, sdLength)
+ return g
+
+
+# Generate a point from the uniform distribution
+# on the surface of the unit ball by rejection sampling
+# from the unit cube
+
+def RanDir():
+ r2 = 2
+ while (r2 > 1):
+  x = random.uniform(-1, 1)
+  y = random.uniform(-1, 1)
+  z = random.uniform(-1, 1)
+  r2 = x*x + y*y + z*z
+ v = Base.Vector(x,y,z)
+ v = v.multiply(1.0/v.Length)
+ return v
+
+
+# Make a single cylinder (fibre)
+# This assumes that the axis is a unit vector
+
+def Fibre(r, l, centre, axis):
+ c = Part.makeCylinder(r,l,centre,axis,360)
+ c.translate(axis.multiply(-l/2))
+ return c
+
+# The pattern is the union of all the cylinders
+
+volume = xBox*yBox*zBox
+number = volume*density - 2
+f = Fibre(radius,RanGaussianLength(),RanBoxPoint(),RanDir())
+for i in range(0,int(number)+1):
+ f = f.fuse(Fibre(radius,RanGaussianLength(),RanBoxPoint(),RanDir()))
+Part.show(f)

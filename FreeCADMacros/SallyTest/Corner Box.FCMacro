@@ -1,0 +1,12 @@
+import Part, FreeCAD, math
+
+screwHR = 3
+screwL = 10
+thick = 2.5
+edge = 3*(screwHR + 2 - thick*0.5)
+print (edge)
+
+#c = Part.makeBox(edge, edge, screwL*2)
+e = Part.makeBox(edge*2, edge*2, screwL*3)
+Part.show(e)
+

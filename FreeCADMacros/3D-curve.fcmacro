@@ -1,0 +1,114 @@
+import Part
+c=Part.BSplineCurve()
+from FreeCAD import Base
+#pts=[Base.Vector(9, 20, -258),
+# Base.Vector(9, 20, -260),
+# Base.Vector(9, 20, -270),
+# Base.Vector(-15, 23, -294)]
+#pts
+#pts=[Base.Vector(1, -26, -297.5),
+# Base.Vector(2, -26, -297.5),
+# Base.Vector(4, -26, -295.5),
+# Base.Vector(9, -26, -287.5),
+# Base.Vector(9, -26, -268.5), 
+# Base.Vector(9, -22, -263.55)]
+#pts
+#pts=[Base.Vector(1, -23.46, -297.5),
+# Base.Vector(3, -23, -297.5),
+# Base.Vector(4, -19, -297.5),
+# Base.Vector(4, 6, -297.5), 
+# Base.Vector(2, 22, -297.5),
+# Base.Vector(9, 26, -291),
+# Base.Vector(9, 26, -273),
+# Base.Vector(9, 20, -262)]
+#pts
+
+# Final paths
+
+# Base block
+
+#pts=[Base.Vector(1, -26, -277.5),
+# Base.Vector(3, -26, -277.5),
+# Base.Vector(9, -25, -268.5),
+# Base.Vector(9, -20, -260.5)]
+#pts
+
+#pts=[Base.Vector(1, -26, -282.58),
+# Base.Vector(6, -26, -285),
+# Base.Vector(7, -26, -290),
+# Base.Vector(4, -25, -295), 
+# Base.Vector(1, -22, -296),
+# Base.Vector(1, -13, -298),
+# Base.Vector(1, 0, -298),
+# Base.Vector(1, 13, -298),
+# Base.Vector(1, 22, -296),
+# Base.Vector(4, 25, -292),
+# Base.Vector(7, 26, -286),
+# Base.Vector(9, 25, -268.5),
+# Base.Vector(9, 20, -260.5)]
+#pts
+
+# Top block
+
+#pts=[Base.Vector(19, -4, 91.5),
+# Base.Vector(13, -6, 90),
+# Base.Vector(10, -9.5, 89),
+# Base.Vector(3, -16, 88),
+# Base.Vector(0, -21, 87),
+# Base.Vector(2, -26, 86),
+# Base.Vector(5, -27, 85),
+# Base.Vector(11, -20, 84)]
+#pts
+
+# Base joiner
+
+#pts=[Base.Vector(-101, -23, -281),
+# Base.Vector(-95, -25, -292),
+# Base.Vector(-98, -30, -301)]
+#pts
+
+# Top joiner
+
+#pts=[Base.Vector(-97, -23.5, 117),
+# Base.Vector(-94, -28, 114),
+# Base.Vector(-97, -30, 110)]
+#pts
+
+# Bed switch
+
+pts=[
+ Base.Vector(-8, -8, -249),
+ Base.Vector(-8, -13, -250),
+ Base.Vector(-8, -16, -252),
+ Base.Vector(-8, -25, -266), 
+ Base.Vector(-8, -28, -270),
+ Base.Vector(-9, -34, -282),
+ Base.Vector(-15, -37, -284),
+ Base.Vector(-24, -46, -293),
+ Base.Vector(-36, -60, -296),
+ Base.Vector(-47, -72, -298),
+ Base.Vector(-63, -83.5, -298.5),
+ Base.Vector(-73, -89, -298.5)
+ ]
+pts
+
+#pts=[
+# Base.Vector(-52, -64.3, -296),
+# Base.Vector(-50, -71, -296),
+# Base.Vector(-63, -83.5, -298.5),
+# Base.Vector(-73, -89, -298.5)
+# ]
+#pts
+
+#pts=[
+# Base.Vector(-9, -34.5, -282.5),
+# Base.Vector(-15, -37, -284),
+# Base.Vector(-24, -46, -293),
+# Base.Vector(-45.5, -65, -296),
+# Base.Vector(-48, -61.3, -296)
+# ]
+pts
+
+c.interpolate(pts)
+s=c.toShape()
+Part.show(s)

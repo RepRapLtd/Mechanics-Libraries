@@ -1,0 +1,13 @@
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+#Make Cylinder Sectors
+
+r=5
+l=10
+a=180
+
+#First Vector is the centre of one end; Second vector is the direction of the axis
+
+c = Part.makeCylinder(r, l, Base.Vector(0,0,0), Base.Vector(0,1,0), a)
+Part.show(c)

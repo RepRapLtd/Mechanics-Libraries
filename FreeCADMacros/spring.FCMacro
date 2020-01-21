@@ -1,0 +1,1652 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from __future__ import division
+"""
+***************************************************************************
+*   Copyright (c) 2014-2015-2016 <mario52>                                *
+*                                                                         *
+*   This file is a supplement to the FreeCAD CAx development system.      *
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU Lesser General Public License (LGPL)    *
+*   as published by the Free Software Foundation; either version 2 of     *
+*   the License, or (at your option) any later version.                   *
+*   for detail see the LICENCE text file.                                 *
+*                                                                         *
+*   This software is distributed in the hope that it will be useful,      *
+*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+*   GNU Library General Public License for more details.                  *
+*                                                                         *
+*   You should have received a copy of the GNU Library General Public     *
+*   License along with this macro; if not, write to the Free Software     *
+*   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+*   USA                                                                   *
+***************************************************************************
+*           WARNING! All changes in this file will be lost and            *  
+*                  may cause malfunction of the program                   *
+***************************************************************************
+"""
+#
+#OS: Windows Vista
+#Word size of OS: 32-bit
+#Word size of FreeCAD: 32-bit
+#Version: 0.15.4527 (Git)
+#Branch: master
+#Hash: 0da2e4c45a9a259c26abd54c2a35393e1c15696f
+#Python version: 2.7.8
+#Qt version: 4.8.6
+#Coin version: 4.0.0a
+#OCC version: 6.7.1
+
+__title__   = "FCSpring_Helix_Variable"
+__author__  = "Mario52"
+__url__     = "http://www.freecadweb.org/index-fr.html"
+__Wiki__    = "http://www.freecadweb.org/wiki/index.php?title=Macro_FCSpring_Helix_Variable"
+__version__ = "01.10"
+__date__    = "10/09/2016"
+
+try:
+    import PyQt4
+    from PyQt4 import QtGui ,QtCore
+    from PyQt4.QtGui import *
+    from PyQt4.QtCore import *
+except Exception:
+    import PySide
+    from PySide import QtGui ,QtCore
+    from PySide.QtGui import *
+    from PySide.QtCore import *
+ 
+import os, time, sys
+import Draft, Part, FreeCAD, math, PartGui, FreeCADGui, FreeCAD
+from math import sqrt, pi, sin, cos, asin, tan, degrees, radians, sqrt
+from FreeCAD import Base
+App = FreeCAD
+
+global path
+#path = FreeCAD.ConfigGet("AppHomePath")
+path = FreeCAD.ConfigGet("UserAppData")
+#path = "your path"
+
+global numberSpires        ;numberSpires         = 10     # number Spires of spring
+global rayon               ;rayon                = 20.0   # radius of spring
+global pas                 ;pas                  = 15.0   # " ! float " (pas) pitch of spire
+global precision           ;precision            = 5.0    # " ! float " 360/precision number points for 1 turn
+global typeLine            ;typeLine             = 0      # typeLine 0=BSpline or 1=Wire
+global helixS              ;helixS               = 0.0    # tableau
+global numberSpiresModified;numberSpiresModified = 1      # number (pas) pitch to modify
+global pasSpire            ;pasSpire             = 0      #pas    # (pas) pitch of spire to modify
+global radiusS             ;radiusS              = 0.0    # tableau radius to modify
+global rayonSpire          ;rayonSpire           = 0      #rayon  # new radius
+global affPoint            ;affPoint             = 0      # aff points
+global debutAngle          ;debutAngle           = 0      # begin angle rotation
+global finAngle            ;finAngle             = 360    # end angle rotation
+global modifyAngle         ;modifyAngle          = 0      # interrupteur angle
+global radius_2_Cone       ;radius_2_Cone        = rayon  # radius_2_Cone en cas d'helice
+global spireConeUne        ;spireConeUne         = 0      # interrupteur cone si une seule spire spireConeUne = 1
+global spireConeComp       ;spireConeComp        = 0      # compensation pour cone
+global spireReverse        ;spireReverse         = 0      # 0 = sens antihoraire si = 1 sens horaire
+global lissageSpire        ;lissageSpire         = 0      # niveau de lissage
+global lissageS            ;lissageS             = 0      # tableau
+global fichierOpen         ;fichierOpen          = 0      # switch fichier precision
+global nomF                ;nomF                 = "Name File" # name file
+global points              ;points               = []     # tableau points
+global zoom                ;zoom                 = 140    # zoom textEdit
+
+
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
+
+def errorDialog(msg):
+    diag = QtGui.QMessageBox(QtGui.QMessageBox.Critical,u"Error Message",msg )
+    try:
+        diag.setWindowFlags(PyQt4.QtCore.Qt.WindowStaysOnTopHint)  # PyQt4 # cette fonction met la fenêtre en avant
+    except Exception:    
+        diag.setWindowFlags(PySide.QtCore.Qt.WindowStaysOnTopHint) # PySide #cette fonction met la fenêtre en avant
+#    diag.setWindowModality(QtCore.Qt.ApplicationModal)       # la fonction a été désactivée pour favoriser "WindowStaysOnTopHint"
+    diag.exec_()
+
+class Ui_MainWindow(object):
+
+    def setupUi(self, MainWindow):
+        global path
+        global numberSpires
+        global rayon
+        global pas
+        global precision
+        global typeLine
+        global helixS
+        global pasSpire
+        global radiusS
+        global spireReverse
+        global nomF
+        global zoom
+
+        self.window = MainWindow
+
+        MainWindow.setObjectName(_fromUtf8("MainWindow"))
+        MainWindow.resize(270, 587)
+        MainWindow.setMinimumSize(QtCore.QSize(270, 42))
+        MainWindow.setMaximumSize(QtCore.QSize(270, 587))
+        self.centralWidget = QtGui.QWidget(MainWindow)
+        self.centralWidget.setObjectName(_fromUtf8("centralWidget"))
+
+        self.fontGlobal_08 = QtGui.QFont()            # pour compatibilite Windows Linux pour tous les textes
+        self.fontGlobal_08.setFamily("Arial")         # pour compatibilite Windows Linux pour tous les textes
+        self.fontGlobal_08.setPointSize(8.0)          # pour compatibilite Windows Linux pour tous les textes
+
+        self.label_11_Name = QtGui.QLabel(self.centralWidget)
+        self.label_11_Name.setGeometry(QtCore.QRect(10, 24, 251, 20))
+        self.label_11_Name.setFont(self.fontGlobal_08)
+        self.label_11_Name.setObjectName("label_11_Name")
+        self.label_11_Name.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+
+        self.groupBox = QtGui.QGroupBox(self.centralWidget)
+        self.groupBox.setGeometry(QtCore.QRect(10, 40, 251, 261))
+        self.groupBox.setFont(self.fontGlobal_08)
+        self.groupBox.setToolTip(_fromUtf8(""))
+        self.groupBox.setFlat(False)
+        self.groupBox.setObjectName(_fromUtf8("groupBox"))
+
+        self.DS_Numb_Spires = QtGui.QSpinBox(self.groupBox)
+        self.DS_Numb_Spires.setGeometry(QtCore.QRect(20, 20, 91, 22))
+        self.DS_Numb_Spires.setFont(self.fontGlobal_08)
+        self.DS_Numb_Spires.setToolTip(_fromUtf8("Number total of coil of the spring"))
+        self.DS_Numb_Spires.setMinimum(1)
+        self.DS_Numb_Spires.setMaximum(9999999)
+        self.DS_Numb_Spires.setValue(numberSpires)
+        self.DS_Numb_Spires.setObjectName(_fromUtf8("DS_Numb_Spires"))
+        self.DS_Numb_Spires.valueChanged.connect(self.on_DS_Numb_Spires) #connection doubleSpinBox
+
+        self.DS_Pas_Spring = QtGui.QDoubleSpinBox(self.groupBox)
+        self.DS_Pas_Spring.setGeometry(QtCore.QRect(20, 50, 91, 22))
+        self.DS_Pas_Spring.setFont(self.fontGlobal_08)
+        self.DS_Pas_Spring.setToolTip(_fromUtf8("Pitch of spring (distance between two vertices)"))
+        self.DS_Pas_Spring.setDecimals(3)
+#        self.DS_Pas_Spring.setMinimum(0.001)
+        self.DS_Pas_Spring.setMaximum(9999999.99)
+        self.DS_Pas_Spring.setValue(pas)
+        self.DS_Pas_Spring.setObjectName(_fromUtf8("DS_Pas_Spring"))
+        self.DS_Pas_Spring.valueChanged.connect(self.on_DS_Pas_Spring) #connection doubleSpinBox
+
+        self.DS_Radius_Sping = QtGui.QDoubleSpinBox(self.groupBox)
+        self.DS_Radius_Sping.setGeometry(QtCore.QRect(20, 80, 91, 22))
+        self.DS_Radius_Sping.setFont(self.fontGlobal_08)
+        self.DS_Radius_Sping.setToolTip(_fromUtf8("Radius of spring"))
+        self.DS_Radius_Sping.setDecimals(3)
+#        self.DS_Radius_Sping.setMinimum(0.001)
+        self.DS_Radius_Sping.setMaximum(9999999.99)
+        self.DS_Radius_Sping.setValue(rayon)
+        self.DS_Radius_Sping.setObjectName(_fromUtf8("DS_Radius_Sping"))
+        self.DS_Radius_Sping.valueChanged.connect(self.on_DS_Radius_Sping) #connection doubleSpinBox
+
+        self.DS_Precision_Turn = QtGui.QSpinBox(self.groupBox)
+        self.DS_Precision_Turn.setGeometry(QtCore.QRect(20, 110, 91, 22))
+        self.DS_Precision_Turn.setFont(self.fontGlobal_08)
+        self.DS_Precision_Turn.setToolTip(_fromUtf8("Precision for the line (points = (360/precision))"+"\n"+
+                                                    "Loading a file or angle checked the value displayd change color in blue just to inform"))
+        self.DS_Precision_Turn.setMinimum(1)
+        self.DS_Precision_Turn.setMaximum(360)
+        self.DS_Precision_Turn.setValue(precision)
+        self.DS_Precision_Turn.setObjectName(_fromUtf8("DS_Precision_Turn"))
+        self.DS_Precision_Turn.valueChanged.connect(self.on_DS_Precision_Turn) #connection doubleSpinBox
+
+        self.label_2 = QtGui.QLabel(self.groupBox)
+        self.label_2.setGeometry(QtCore.QRect(120, 20, 111, 16))
+        self.label_2.setFont(self.fontGlobal_08)
+        self.label_2.setToolTip(_fromUtf8("Number total of coil of the spring"))
+        self.label_2.setObjectName(_fromUtf8("label_2"))
+
+        self.label_3 = QtGui.QLabel(self.groupBox)
+        self.label_3.setGeometry(QtCore.QRect(120, 80, 111, 16))
+        self.label_3.setFont(self.fontGlobal_08)
+        self.label_3.setToolTip(_fromUtf8("Radius of spring"))
+        self.label_3.setText(_fromUtf8("Radius of spring"))
+        self.label_3.setObjectName(_fromUtf8("label_3"))
+
+        self.label_4 = QtGui.QLabel(self.groupBox)
+        self.label_4.setGeometry(QtCore.QRect(120, 50, 111, 16))
+        self.label_4.setFont(self.fontGlobal_08)
+#        self.label_4.setToolTip(_fromUtf8("Pitch of spring (distance between two vertices)"+"Hello <img src=\"C:\Provisoire400\clear.gif\" />"))
+        self.label_4.setToolTip(_fromUtf8("Pitch of spring (distance between two vertices)"))
+        self.label_4.setText(_fromUtf8("Pitch of spring"))
+        self.label_4.setObjectName(_fromUtf8("label_4"))
+
+        self.label_5 = QtGui.QLabel(self.groupBox)
+        self.label_5.setGeometry(QtCore.QRect(120, 110, 130, 16))
+        self.label_5.setFont(self.fontGlobal_08)
+        self.label_5.setToolTip(_fromUtf8("The precision is the number point (360/precision) for create one turn of the spring"+"\n"+
+                                          "Loading a file or angle checked the value displayed change color in blue just to inform"))
+        self.label_5.setText(_fromUtf8("Precision = " + str(int(360/precision)) + " points"))
+        self.label_5.setObjectName(_fromUtf8("label_5"))
+
+        self.groupBox_3 = QtGui.QGroupBox(self.groupBox)
+        self.groupBox_3.setGeometry(QtCore.QRect(10, 200, 231, 51))
+        self.groupBox_3.setFont(self.fontGlobal_08)
+        self.groupBox_3.setObjectName(_fromUtf8("groupBox_3"))
+
+        self.RA_Wire = QtGui.QRadioButton(self.groupBox_3)
+        self.RA_Wire.setGeometry(QtCore.QRect(67, 20, 51, 20))
+        self.RA_Wire.setFont(self.fontGlobal_08)
+        self.RA_Wire.setToolTip(_fromUtf8("Type line Wire"))
+        self.RA_Wire.setText(_fromUtf8("Wire"))
+#        self.RA_Wire.setChecked(True)
+        self.RA_Wire.setObjectName(_fromUtf8("RA_Wire"))
+        self.RA_Wire.clicked.connect(self.on_RA_Wire) #connection radioButton
+
+        self.RA_BSpline = QtGui.QRadioButton(self.groupBox_3)
+        self.RA_BSpline.setGeometry(QtCore.QRect(10, 20, 61, 20))
+        self.RA_BSpline.setFont(self.fontGlobal_08)
+        self.RA_BSpline.setToolTip(_fromUtf8("Type line BSpline"))
+        self.RA_BSpline.setText(_fromUtf8("BSpline"))
+        self.RA_BSpline.setChecked(True)
+        self.RA_BSpline.setObjectName(_fromUtf8("RA_BSpline"))
+        self.RA_BSpline.clicked.connect(self.on_RA_BSpline) #connection radioButton
+
+        self.CH_Points = QtGui.QCheckBox(self.groupBox_3)
+        self.CH_Points.setGeometry(QtCore.QRect(117, 20, 51, 20))
+        self.CH_Points.setFont(self.fontGlobal_08)
+        self.CH_Points.setEnabled(True)
+        self.CH_Points.setToolTip(_fromUtf8("Check to create points to alls nodes of the precision of turn"))
+        self.CH_Points.setText(_fromUtf8("Ch"))
+#        self.CH_Points.setStatusTip(_fromUtf8(""))
+        self.CH_Points.setChecked(False)
+        self.CH_Points.setObjectName(_fromUtf8("CH_Points"))
+        self.CH_Points.clicked.connect(self.on_CH_Points) #
+
+        self.CH_Reverse = QtGui.QCheckBox(self.groupBox_3)
+        self.CH_Reverse.setEnabled(True)
+        self.CH_Reverse.setGeometry(QtCore.QRect(172, 20, 61, 20))
+        self.CH_Reverse.setFont(self.fontGlobal_08)
+        self.CH_Reverse.setToolTip(_fromUtf8("Check to create spring clockwise direction"))
+        self.CH_Reverse.setText(_fromUtf8("Ch"))
+#        self.CH_Reverse.setStatusTip(_fromUtf8(""))
+        self.CH_Reverse.setChecked(False)
+        self.CH_Reverse.setObjectName(_fromUtf8("CH_Points"))
+        self.CH_Reverse.clicked.connect(self.on_CH_Reverse) #
+
+        self.S_Begin_Angle = QtGui.QSpinBox(self.groupBox)
+        self.S_Begin_Angle.setEnabled(False)
+        self.S_Begin_Angle.setGeometry(QtCore.QRect(20, 170, 51, 22))
+        self.S_Begin_Angle.setFont(self.fontGlobal_08)
+        self.S_Begin_Angle.setMinimum(0)
+        self.S_Begin_Angle.setMaximum(360)
+        self.S_Begin_Angle.setValue(0)
+        self.S_Begin_Angle.setObjectName(_fromUtf8("S_Begin_Angle"))
+        self.S_Begin_Angle.valueChanged.connect(self.on_S_Begin_Angle) #
+
+        self.S_End_Angle = QtGui.QSpinBox(self.groupBox)
+        self.S_End_Angle.setEnabled(False)
+        self.S_End_Angle.setGeometry(QtCore.QRect(120, 170, 51, 22))
+        self.S_End_Angle.setFont(self.fontGlobal_08)
+        self.S_End_Angle.setMinimum(1)
+        self.S_End_Angle.setMaximum(360)
+        self.S_End_Angle.setValue(360)
+        self.S_End_Angle.setObjectName(_fromUtf8("S_End_Angle"))
+        self.S_End_Angle.valueChanged.connect(self.on_S_End_Angle) #
+
+        self.label_9 = QtGui.QLabel(self.groupBox)
+        self.label_9.setGeometry(QtCore.QRect(80, 170, 41, 16))
+        self.label_9.setFont(self.fontGlobal_08)
+        self.label_9.setObjectName(_fromUtf8("label_9"))
+
+        self.label_10 = QtGui.QLabel(self.groupBox)
+        self.label_10.setGeometry(QtCore.QRect(180, 170, 31, 16))
+        self.label_10.setFont(self.fontGlobal_08)
+        self.label_10.setObjectName(_fromUtf8("label_10"))
+
+        self.CH_B_E_Angle = QtGui.QCheckBox(self.groupBox)
+        self.CH_B_E_Angle.setGeometry(QtCore.QRect(210, 170, 41, 20))
+        self.CH_B_E_Angle.setFont(self.fontGlobal_08)
+        self.CH_B_E_Angle.setToolTip(_fromUtf8("Check the option modify to begin and ultimate angle of coils"+"\n"
+                                               "The final result depend on the level of precision given"+"\n"
+                                               "Optimal : 1 , Precision = 360 points (1 point by degree)"))
+        self.CH_B_E_Angle.setText(_fromUtf8(""))
+        self.CH_B_E_Angle.setObjectName(_fromUtf8("CB_B_E_Angle"))
+        self.CH_B_E_Angle.clicked.connect(self.on_CH_B_E_Angle) #connection radioButton
+
+        self.DS_Radius_2_Cone = QtGui.QDoubleSpinBox(self.groupBox)
+        self.DS_Radius_2_Cone.setEnabled(False)
+        self.DS_Radius_2_Cone.setGeometry(QtCore.QRect(20, 140, 91, 22))
+        self.DS_Radius_2_Cone.setFont(self.fontGlobal_08)
+        self.DS_Radius_2_Cone.setToolTip(_fromUtf8("Radius for make a cone"+"\n"+
+                                                   "This radius is always greater than the principal radius"))
+        self.DS_Radius_2_Cone.setDecimals(3)
+        self.DS_Radius_2_Cone.setMaximum(9999999.99)
+#        self.DS_Radius_2_Cone.setMinimum(rayon)
+        self.DS_Radius_2_Cone.setValue(rayon)
+        self.DS_Radius_2_Cone.setObjectName(_fromUtf8("DS_Radius_2_Cone"))
+        self.DS_Radius_2_Cone.valueChanged.connect(self.on_DS_Radius_2_Cone) #
+
+        self.CH_Cone = QtGui.QCheckBox(self.groupBox)
+        self.CH_Cone.setEnabled(True)
+        self.CH_Cone.setGeometry(QtCore.QRect(120, 140, 121, 20))
+        self.CH_Cone.setFont(self.fontGlobal_08)
+        self.CH_Cone.setToolTip(_fromUtf8("Check for create one conical helix"))
+        self.CH_Cone.setObjectName(_fromUtf8("CH_Cone"))
+        self.CH_Cone.clicked.connect(self.on_CH_Cone) # 
+        
+        self.groupBox_2 = QtGui.QGroupBox(self.centralWidget)
+        self.groupBox_2.setGeometry(QtCore.QRect(10, 310, 251, 201))
+        self.groupBox_2.setFont(self.fontGlobal_08)
+        self.groupBox_2.setToolTip(_fromUtf8("This section allows you to adjust the distance from the coil named. EX: 1 spire = 2 mm"))
+        self.groupBox_2.setCheckable(False)
+        self.groupBox_2.setChecked(False)
+        self.groupBox_2.setObjectName(_fromUtf8("groupBox_2"))
+
+        self.S_Numbering_Spire = QtGui.QSpinBox(self.groupBox_2)
+        self.S_Numbering_Spire.setGeometry(QtCore.QRect(20, 20, 80, 22))
+        self.S_Numbering_Spire.setFont(self.fontGlobal_08)
+        self.S_Numbering_Spire.setToolTip(_fromUtf8("Numbering of coil for 1 to max = Number of coil ("+str(numberSpires)+")"))
+        self.S_Numbering_Spire.setMinimum(1)
+        self.S_Numbering_Spire.setMaximum(numberSpires)
+        self.S_Numbering_Spire.setObjectName(_fromUtf8("S_Nmbering_Spire"))
+        self.S_Numbering_Spire.valueChanged.connect(self.on_S_Numbering_Spire) #connection SpinBox
+
+        self.CH_Smooting = QtGui.QCheckBox(self.groupBox_2)
+        self.CH_Smooting.setEnabled(True)
+        self.CH_Smooting.setGeometry(QtCore.QRect(188, 20, 70, 17))
+        self.CH_Smooting.setFont(self.fontGlobal_08)
+        self.CH_Smooting.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                              "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                              "The finish and precision are influenced by this value"+"\n"+
+                                              "PS: The result can be satisfying or completely wrong (prototype state)"))
+        self.CH_Smooting.setObjectName(_fromUtf8("CH_Smooting"))
+        self.CH_Smooting.clicked.connect(self.on_CH_Smooting) # 
+        
+        self.S_Lissage = QtGui.QSpinBox(self.groupBox_2)
+        self.S_Lissage.setGeometry(QtCore.QRect(188, 20, 42, 22))
+        self.S_Lissage.setFont(self.fontGlobal_08)
+        self.S_Lissage.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                              "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                              "The finish and precision are influenced by this value"+"\n"+
+                                              "PS: The result can be satisfying or completely wrong (prototype state)"))
+        self.S_Lissage.setVisible(False)
+        self.S_Lissage.setMinimum(0)
+        self.S_Lissage.setMaximum(int(360/precision)-1)
+        self.S_Lissage.setObjectName(_fromUtf8("S_Lissage"))
+        self.S_Lissage.valueChanged.connect(self.on_S_Lissage) #connection SpinBox
+
+        self.DS_Pas_Spire = QtGui.QDoubleSpinBox(self.groupBox_2)
+        self.DS_Pas_Spire.setGeometry(QtCore.QRect(20, 50, 80, 22))
+        self.DS_Pas_Spire.setFont(self.fontGlobal_08)
+        self.DS_Pas_Spire.setToolTip(_fromUtf8("Pitch of the coil (The pitch is the distance betwen 2 vertices)"))
+        self.DS_Pas_Spire.setValue(0) #pas
+        self.DS_Pas_Spire.setDecimals(3)
+        self.DS_Pas_Spire.setMaximum(9999999.99)
+        self.DS_Pas_Spire.setObjectName(_fromUtf8("DS_Pas_Spire"))
+        self.DS_Pas_Spire.valueChanged.connect(self.on_DS_Pas_Spire) #connection doubleSpinBox
+
+        self.PU_To_Pas = QtGui.QPushButton(self.groupBox_2)
+        self.PU_To_Pas.setGeometry(QtCore.QRect(188, 50, 42, 23))
+        self.PU_To_Pas.setFont(self.fontGlobal_08)
+        self.PU_To_Pas.setToolTip(_fromUtf8("Align the value to pitch global configured"))
+        self.PU_To_Pas.setObjectName(_fromUtf8("PU_To_Pas"))
+        self.PU_To_Pas.clicked.connect(self.on_PU_To_Pas)
+
+        self.DS_Radius_Spire = QtGui.QDoubleSpinBox(self.groupBox_2)
+        self.DS_Radius_Spire.setGeometry(QtCore.QRect(20, 80, 80, 22))
+        self.DS_Radius_Spire.setFont(self.fontGlobal_08)
+        self.DS_Radius_Spire.setToolTip(_fromUtf8("Radius of coil "))
+        self.DS_Radius_Spire.setDecimals(3)
+        self.DS_Radius_Spire.setValue(0) #rayon
+#        self.DS_Radius_Spire.setMinimum(0.001)
+        self.DS_Radius_Spire.setMaximum(9999999.99)
+        self.DS_Radius_Spire.setObjectName(_fromUtf8("DS_Radius_Spire"))
+        self.DS_Radius_Spire.valueChanged.connect(self.on_DS_Radius_Spire) #connection doubleSpinBox
+
+        self.PU_To_Radius = QtGui.QPushButton(self.groupBox_2)
+        self.PU_To_Radius.setGeometry(QtCore.QRect(188, 80, 42, 23))
+        self.PU_To_Radius.setFont(self.fontGlobal_08)
+        self.PU_To_Radius.setToolTip(_fromUtf8("Align the value to radius global configured"))
+        self.PU_To_Radius.setObjectName(_fromUtf8("PU_To_Radius"))
+        self.PU_To_Radius.clicked.connect(self.on_PU_To_Radius)
+
+#        section progressBar 1
+        self.PBA_progressBar = QtGui.QProgressBar(self.groupBox_2)                               # 
+        self.PBA_progressBar.setGeometry(QtCore.QRect(20, 110, 211, 21))
+        self.PBA_progressBar.setFont(self.fontGlobal_08)
+        self.PBA_progressBar.setCursor(QtCore.Qt.WaitCursor)
+        self.PBA_progressBar.setValue(0)
+        self.PBA_progressBar.setVisible(False)
+        self.PBA_progressBar.setOrientation(QtCore.Qt.Horizontal)
+        self.PBA_progressBar.setAlignment(QtCore.Qt.AlignCenter)
+        self.PBA_progressBar.setObjectName(_fromUtf8("PBA_progressBar"))
+#        self.PBA_progressBar.setToolTip(_translate("MainWindow", " ", None))
+
+        self.label_6 = QtGui.QLabel(self.groupBox_2)
+        self.label_6.setGeometry(QtCore.QRect(111, 20, 71, 16))
+        self.label_6.setFont(self.fontGlobal_08)
+        self.label_6.setToolTip(_fromUtf8("Numbering of coil for 1 to max =  Number of coil"))
+        self.label_6.setText(_fromUtf8("Number of coil"))
+        self.label_6.setObjectName(_fromUtf8("label_6"))
+
+        self.label_7 = QtGui.QLabel(self.groupBox_2)
+        self.label_7.setGeometry(QtCore.QRect(111, 50, 61, 16))
+        self.label_7.setFont(self.fontGlobal_08)
+        self.label_7.setToolTip(_fromUtf8("Pitch of the coil (The pitch is the distance betwen 2 vertices)"))
+        self.label_7.setObjectName(_fromUtf8("label_7"))
+
+        self.label_8 = QtGui.QLabel(self.groupBox_2)
+        self.label_8.setGeometry(QtCore.QRect(111, 80, 71, 16))
+        self.label_8.setFont(self.fontGlobal_08)
+        self.label_8.setToolTip(_fromUtf8("Radius of coil "))
+        self.label_8.setText(_fromUtf8("Radius of coil"))
+        self.label_8.setObjectName(_fromUtf8("label_8"))
+
+        self.PU_Accept_Value = QtGui.QPushButton(self.groupBox_2)
+        self.PU_Accept_Value.setGeometry(QtCore.QRect(20, 110, 211, 21))
+        self.PU_Accept_Value.setFont(self.fontGlobal_08)
+        self.PU_Accept_Value.setToolTip(_fromUtf8("Accept the value for the coil "))
+        self.PU_Accept_Value.setObjectName(_fromUtf8("PU_Accept_Value"))
+        self.image_01 = path+"FCSpring_Helix_Variable_Icon_01.png"                          # image
+        icon01 = QtGui.QIcon()                                                              #
+        icon01.addPixmap(QtGui.QPixmap(self.image_01),QtGui.QIcon.Normal, QtGui.QIcon.Off)  #
+        self.PU_Accept_Value.setIcon(icon01)                                                #
+        self.PU_Accept_Value.clicked.connect(self.on_PU_Accept_Value)
+
+        self.textEdit = QtGui.QTextEdit(self.groupBox_2)
+        self.textEdit.setGeometry(QtCore.QRect(20, zoom, 211, 51))
+        self.textEdit.setFont(self.fontGlobal_08)
+        self.textEdit.setToolTip(_fromUtf8("List alls modification of coil "))
+        self.textEdit.setObjectName(_fromUtf8("textEdit"))
+        self.textEdit.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+
+        self.PB_Loupe = QtGui.QPushButton(self.groupBox_2)
+        self.PB_Loupe.setGeometry(QtCore.QRect(232, 176, 16, 16))
+        self.PB_Loupe.setFont(self.fontGlobal_08)
+        self.PB_Loupe.setToolTip(_fromUtf8("Zoom text edit"))
+        self.PB_Loupe.setObjectName(_fromUtf8("PB_Loupe"))
+        self.PB_Loupe.clicked.connect(self.on_PB_Loupe)
+
+        self.PU_Read = QtGui.QPushButton(self.centralWidget)
+        self.PU_Read.setGeometry(QtCore.QRect(10, 516, 121, 21))
+        self.PU_Read.setFont(self.fontGlobal_08)
+        self.PU_Read.setToolTip(_fromUtf8("Read the file "))
+        self.PU_Read.setText(_fromUtf8("Load"))
+        self.PU_Read.setObjectName(_fromUtf8("on_PU_Read"))
+        self.image_02 = path+"FCSpring_Helix_Variable_Icon_02.png"                          # image
+        icon02 = QtGui.QIcon()                                                              #
+        icon02.addPixmap(QtGui.QPixmap(self.image_02),QtGui.QIcon.Normal, QtGui.QIcon.Off)  #
+        self.PU_Read.setIcon(icon02)                                                        #
+        self.PU_Read.clicked.connect(self.on_PU_Read)
+
+        self.PU_Save = QtGui.QPushButton(self.centralWidget)
+        self.PU_Save.setGeometry(QtCore.QRect(140, 516, 121, 21))
+        self.PU_Save.setFont(self.fontGlobal_08)
+        self.PU_Save.setToolTip(_fromUtf8("Save the file"))
+        self.PU_Save.setText(_fromUtf8("Save"))
+        self.PU_Save.setObjectName(_fromUtf8("on_PU_Save"))
+        self.image_03 = path+"FCSpring_Helix_Variable_Icon_03.png"                          # image
+        icon03 = QtGui.QIcon()                                                              #
+        icon03.addPixmap(QtGui.QPixmap(self.image_03),QtGui.QIcon.Normal, QtGui.QIcon.Off)  #
+        self.PU_Save.setIcon(icon03)                                                        #
+        self.PU_Save.clicked.connect(self.on_PU_Save)
+
+        self.PU_Read_Coord = QtGui.QPushButton(self.centralWidget)
+        self.PU_Read_Coord.setEnabled(True)
+        self.PU_Read_Coord.setGeometry(QtCore.QRect(10, 538, 121, 21))
+        self.PU_Read_Coord.setFont(self.fontGlobal_08)
+        self.PU_Read_Coord.setObjectName("PU_Read_Coord")
+        self.PU_Read_Coord.setToolTip(_fromUtf8("Load the coordinates file "))
+        self.PU_Read_Coord.setText(_fromUtf8("Load coordinates"))
+        self.image_02b = path+"FCSpring_Helix_Variable_Icon_02b.png"                         # image
+        icon02b = QtGui.QIcon()                                                              #
+        icon02b.addPixmap(QtGui.QPixmap(self.image_02b),QtGui.QIcon.Normal, QtGui.QIcon.Off) #
+        self.PU_Read_Coord.setIcon(icon02b)                                                  #
+        self.PU_Read_Coord.clicked.connect(self.on_PU_Read_Coord)
+
+        self.PU_Save_Coord = QtGui.QPushButton(self.centralWidget)
+        self.PU_Save_Coord.setGeometry(QtCore.QRect(140, 538, 121, 21))
+        self.PU_Save_Coord.setFont(self.fontGlobal_08)
+        self.PU_Save_Coord.setObjectName("on_PU_Coordinates")
+        self.PU_Save_Coord.setToolTip(_fromUtf8("Save the coordinates file "))
+        self.PU_Save_Coord.setText(_fromUtf8("Save coordinates"))
+        self.image_03b = path+"FCSpring_Helix_Variable_Icon_03b.png"                        # image
+        icon03b = QtGui.QIcon()                                                             #
+        icon03b.addPixmap(QtGui.QPixmap(self.image_03b),QtGui.QIcon.Normal, QtGui.QIcon.Off)#
+        self.PU_Save_Coord.setIcon(icon03b)                                                 #
+        self.PU_Save_Coord.clicked.connect(self.on_PU_Save_Coord)
+
+        self.PU_Quit = QtGui.QPushButton(self.centralWidget)
+        self.PU_Quit.setGeometry(QtCore.QRect(10, 560, 81, 21))
+        self.PU_Quit.setFont(self.fontGlobal_08)
+        self.PU_Quit.setToolTip(_fromUtf8("Quit the macro"))
+        self.PU_Quit.setText(_fromUtf8("Quit"))
+        self.PU_Quit.setObjectName(_fromUtf8("PU_Quit"))
+        self.image_04 = path+"FCSpring_Helix_Variable_Icon_04.png"                          # image
+        icon04 = QtGui.QIcon()                                                              #
+        icon04.addPixmap(QtGui.QPixmap(self.image_04),QtGui.QIcon.Normal, QtGui.QIcon.Off)  #
+        self.PU_Quit.setIcon(icon04)                                                        #
+        self.PU_Quit.clicked.connect(self.on_PU_Quit)
+
+        self.PU_Reset = QtGui.QPushButton(self.centralWidget)
+        self.PU_Reset.setGeometry(QtCore.QRect(100, 560, 71, 21))
+        self.PU_Reset.setFont(self.fontGlobal_08)
+        self.PU_Reset.setToolTip(_fromUtf8("Reset complete the data "))
+        self.PU_Reset.setObjectName(_fromUtf8("PU_Reset"))
+        self.image_05 = path+"FCSpring_Helix_Variable_Icon_05.png"                          # image
+        icon05 = QtGui.QIcon()                                                              #
+        icon05.addPixmap(QtGui.QPixmap(self.image_05),QtGui.QIcon.Normal, QtGui.QIcon.Off)  #
+        self.PU_Reset.setIcon(icon05)                                                       #
+        self.PU_Reset.clicked.connect(self.on_PU_Reset)
+
+        self.PU_Launch = QtGui.QPushButton(self.centralWidget)
+        self.PU_Launch.setGeometry(QtCore.QRect(180, 560, 81, 21))
+        self.PU_Launch.setFont(self.fontGlobal_08)
+        self.PU_Launch.setToolTip(_fromUtf8("launch the macro and create the spring"))
+        self.PU_Launch.setText(_fromUtf8("Launch "))
+        self.PU_Launch.setObjectName(_fromUtf8("PU_Launch"))
+        self.image_06 = path+"FCSpring_Helix_Variable_Icon_06.png"                          # image
+        icon06 = QtGui.QIcon()                                                              #
+        icon06.addPixmap(QtGui.QPixmap(self.image_06),QtGui.QIcon.Normal, QtGui.QIcon.Off)  #
+        self.PU_Launch.setIcon(icon06)                                                      #
+        self.PU_Launch.clicked.connect(self.on_PU_Launch)
+
+        self.label = QtGui.QLabel(self.centralWidget)
+        self.label.setGeometry(QtCore.QRect(39, 0, 201, 31))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setItalic(True)
+        font.setUnderline(True)
+        font.setWeight(75)
+        self.label.setFont(font)
+        self.label.setText(_fromUtf8("FCSpring Helix Variable"))
+        self.label.setObjectName(_fromUtf8("label"))
+        MainWindow.setCentralWidget(self.centralWidget)
+
+        MainWindow.setCentralWidget(self.centralWidget)
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        try:
+            MainWindow.setWindowFlags(PyQt4.QtCore.Qt.WindowStaysOnTopHint)        # PyQt4 cette fonction met la fenetre en avant
+        except Exception:
+            MainWindow.setWindowFlags(PySide.QtCore.Qt.WindowStaysOnTopHint)       # PySide cette fonction met la fenetre en avant
+
+        MainWindow.setWindowIcon(QtGui.QIcon(path+'FCSpring_Helix_Variable.png'))  # change l'icone de la fenetre principale
+        MainWindow.setWindowTitle("FCSpring Helix Variable")
+        self.groupBox.setTitle("Configure")
+        self.label_2.setText("Number of coil")
+        self.groupBox_3.setTitle("Type line")
+        self.RA_Wire.setToolTip("Type line Wire")
+
+        self.label_11_Name.setText(nomF)
+        self.CH_Points.setText("Points")
+        self.CH_Reverse.setText("Reverse")
+        self.CH_Smooting.setText("Smooting")
+        self.S_Begin_Angle.setToolTip("Begin angle first coil")
+        self.S_Begin_Angle.setSuffix("°")
+        self.S_End_Angle.setToolTip("End angle ultimate coil")
+        self.S_End_Angle.setStatusTip("End angle to ultimate coil")
+        self.S_End_Angle.setSuffix("°")
+        self.label_9.setText("Begin")
+        self.label_10.setText("End")
+        self.CH_B_E_Angle.setText("Ch.")
+        self.CH_Cone.setText("Spring conical")
+        self.groupBox_2.setTitle("Coil special length")
+        self.label_7.setText("Pitch of coil")
+        self.label_7.setToolTip(_fromUtf8("Pitch of coil"))
+
+        self.PU_To_Radius.setText(str(rayon))
+        self.PU_To_Pas.setText(str(pas))
+
+        self.PU_Accept_Value.setText("Accept the value modified")
+        self.textEdit.setText("")
+        self.PB_Loupe.setText(str("Z"))
+        self.PU_Reset.setText("Reset")
+
+    def on_PU_Reset(self, zero = 0):                       # Reset 0=Reset total 1=Reset mise a jour
+        global numberSpires
+        global rayon
+        global pas
+        global precision
+        global typeLine
+        global affPoint
+        global helixS
+        global numberSpiresModified
+        global pasSpire
+        global radiusS
+        global rayonSpire
+        global affPoint
+        global debutAngle
+        global finAngle
+        global modifyAngle
+        global radius_2_Cone
+        global spireConeUne
+        global spireConeComp
+        global spireReverse
+        global lissageSpire
+        global lissageS
+        global fichierOpen
+        global nomF
+        global zoom
+
+        if zero == 0:                                 # 0 = Reset total
+            numberSpires         = 10
+            rayon                = 20.0
+            pas                  = 15.0
+            precision            = 5.0
+            typeLine             = 0
+            affPoint             = 0
+            helixS               = 0.0
+            radiusS              = 0.0
+            numberSpiresModified = 1
+            pasSpire             = 0 #pas
+            rayonSpire           = 0 #rayon
+            modifyAngle          = 0
+            radius_2_Cone        = rayon
+            fichierOpen          = 0
+            nomF                 = "Name File"
+            self.label_11_Name.setText(nomF)
+#            App.Console.PrintMessage(str("on_PU_Reset T")+"\n")
+
+        self.DS_Numb_Spires.setValue(numberSpires)
+        self.DS_Radius_Sping.setValue(rayon)
+        self.DS_Pas_Spring.setValue(pas)
+        self.DS_Precision_Turn.setValue(precision)
+        self.DS_Precision_Turn.setEnabled(True)
+        self.label_2.setText("Number of coil")
+
+        ############### font and color Label
+        font = QtGui.QFont()
+        self.label_5.setFont(font)
+        self.label_5.setObjectName("label_5")
+        self.label_5.setStyleSheet("Base")
+        self.label_5.setText(_fromUtf8("Precision = " + str(360/precision) + " points"))
+        ############### font and color
+
+        ############### font and color
+        palette = QtGui.QPalette()
+        brush = QtGui.QBrush(QtGui.QColor("Base"))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+        self.DS_Precision_Turn.setPalette(palette)
+        font = QtGui.QFont()
+        font.setBold(False)
+        self.DS_Precision_Turn.setFont(font)
+        ###############
+
+        self.CH_B_E_Angle.setChecked(False)
+        self.S_Begin_Angle.setEnabled(False)
+        debutAngle = 0
+        self.S_Begin_Angle.setValue(debutAngle)
+        self.S_End_Angle.setEnabled(False)
+        finAngle   = 360
+        self.S_End_Angle.setValue(finAngle)
+        modifyAngle = 0
+
+        self.CH_Points.setChecked(False)
+        affPoint = 0
+        self.CH_Reverse.setChecked(False)
+        spireReverse = 0
+
+        self.S_Numbering_Spire.setValue(numberSpiresModified)
+        self.S_Numbering_Spire.setMaximum(numberSpires)
+        self.DS_Pas_Spire.setValue(0)    #pas
+        self.DS_Radius_Spire.setValue(0) #rayon
+        self.textEdit.setText("")
+        self.textEdit.clear()
+
+        lissageSpire = 0
+        self.S_Lissage.setValue(0)
+        self.S_Lissage.setVisible(False)
+        self.S_Lissage.setMaximum(int(360/precision)-1)
+        self.S_Lissage.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                            "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                            "The finish and precision are influenced by this value"+"\n"+
+                                            "PS: The result can be satisfying or completely wrong (prototype state)"))
+        self.CH_Smooting.setChecked(False)
+        self.CH_Smooting.setVisible(True)
+        self.CH_Smooting.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                              "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                              "The finish and precision are influenced by this value"+"\n"+
+                                              "PS: The result can be satisfying or completely wrong (prototype state)"))
+        lissageS = []
+        del lissageS[:]
+        lissageS = numberSpires*[0]
+        self.S_Lissage.setValue(0)
+
+        self.PBA_progressBar.setVisible(False)
+        self.PU_Accept_Value.setVisible(True)
+
+        zoom = 140
+        self.textEdit.setGeometry(QtCore.QRect(20, zoom, 211, 51))
+
+        helixS = []
+        del helixS[:]
+        helixS = numberSpires*[pas]
+
+        radiusS = []
+        del radiusS[:]
+        radiusS = numberSpires*[rayon]
+
+        self.CH_Cone.setChecked(False)
+        self.DS_Radius_2_Cone.setValue(rayon)
+        self.DS_Radius_2_Cone.setEnabled(False)
+        spireConeUne  = 0
+        spireConeComp = 0
+#        App.Console.PrintMessage(str("on_PU_Reset ")+"\n")
+
+    def on_DS_Numb_Spires(self,value):          # nombre de spire total
+        global pas
+        global numberSpires
+        numberSpires = value
+        a = ui
+        a.on_PU_Reset(1)
+        self.S_Numbering_Spire.setToolTip(_fromUtf8("Numbering of coil for 1 to max = Number of spires ("+str(numberSpires)+")"))
+#        App.Console.PrintMessage(str("on_DS_Numb_Spires ")+str(numberSpires)+"\n")
+
+    def on_DS_Radius_Sping(self,value):         # rayon axial du ressort
+        global rayon
+        rayon = value
+        self.PU_To_Radius.setText(str(rayon))
+        a = ui
+        a.on_PU_Reset(1)
+#        App.Console.PrintMessage(str("on_DS_Radius_Sping ")+str(rayon)+"\n")
+
+    def on_DS_Pas_Spring(self,value):           # pas (pitch) du ressort
+        global pas
+        global numberSpires
+        global numberSpiresModified
+        global pasSpire
+        pas = value
+        self.PU_To_Pas.setText(str(pas))
+        a = ui
+        a.on_PU_Reset(1)
+#        App.Console.PrintMessage(str("on_DS_Pas_Spring ")+str(pas)+"\n")
+
+    def on_DS_Precision_Turn(self,value):        # " ! float " 360/precision number points for 1 turn
+        global precision
+        precision = value
+        ############### font and color Label
+        font = QtGui.QFont()
+        self.label_5.setFont(font)
+        self.label_5.setObjectName("label_5")
+        self.label_5.setStyleSheet("Base")
+        self.label_5.setText(_fromUtf8("Precision = " + str(360/precision) + " points"))
+        ############### font and color
+        ############### font and color
+        palette = QtGui.QPalette()
+        brush = QtGui.QBrush(QtGui.QColor("Base"))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+#        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.WindowText, brush)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+        self.DS_Precision_Turn.setPalette(palette)
+        font = QtGui.QFont()
+        font.setBold(False)
+#        font.setWeight(75)
+        self.DS_Precision_Turn.setFont(font)
+        ###############
+        self.label_5.setText(_fromUtf8("Precision = " + str(int(360/precision)) + " points"))
+        self.S_Lissage.setMaximum(int(360/precision)-1)
+        self.CH_Smooting.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                              "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                              "The finish and precision are influenced by this value"+"\n"+
+                                              "PS: The result can be satisfying or completely wrong (prototype state)"))
+#        App.Console.PrintMessage(str("on_DS_Precision_Turn ")+str(precision)+"\n")
+
+    def on_S_Begin_Angle(self,value):              #
+        global debutAngle
+        debutAngle = value
+#        App.Console.PrintMessage(str("on_S_Begin_Angle ")+str(debutAngle)+"\n")
+
+    def on_S_End_Angle(self,value):                #
+        global finAngle
+        finAngle = value
+#        App.Console.PrintMessage(str("on_S_End_Angle ")+str(finAngle)+"\n")
+
+    def on_CH_B_E_Angle(self):                     #
+        global debutAngle
+        global finAngle
+        global modifyAngle
+        global precision
+        global fichierOpen
+        if self.CH_B_E_Angle.isChecked(): 
+            modifyAngle = 1
+            self.S_Begin_Angle.setEnabled(True)
+            self.S_End_Angle.setEnabled(True)
+            if fichierOpen == 0:
+                precision = 1
+            fichierOpen = 0
+            self.DS_Precision_Turn.setValue(precision)
+
+            ############### font and color Label
+            font = QtGui.QFont()
+            self.label_5.setFont(font)
+            self.label_5.setObjectName("label_5")
+            self.label_5.setStyleSheet("color : #0000ff")
+            self.label_5.setText(_fromUtf8("Precision = " + str(360/precision) + " points"))
+            ############### font and color
+            ############### font and color DoubleSpinBox
+            palette = QtGui.QPalette()
+            brush = QtGui.QBrush(QtGui.QColor( 0, 0, 255))
+            brush.setStyle(QtCore.Qt.SolidPattern)
+#            palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.WindowText, brush)
+            palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+            self.DS_Precision_Turn.setPalette(palette)
+            font = QtGui.QFont()
+            font.setBold(True)
+            font.setWeight(75)
+            self.DS_Precision_Turn.setFont(font)
+#            self.DS_Precision_Turn.setObjectName(_fromUtf8("DS_Precision_Turn"))
+            ###############
+
+        else:
+            modifyAngle = 0
+#            self.DS_Precision_Turn.setEnabled(True)
+            self.S_Begin_Angle.setEnabled(False)
+            self.S_End_Angle.setEnabled(False)
+            self.CH_B_E_Angle.setChecked(False)
+            self.S_Begin_Angle.setEnabled(False)
+            debutAngle = 0
+            self.S_Begin_Angle.setValue(debutAngle)
+            self.S_End_Angle.setEnabled(False)
+            finAngle   = 360
+            self.S_End_Angle.setValue(finAngle)
+#        App.Console.PrintMessage(str("CB_B_E_Angle ")+"\n")
+
+    def on_RA_Wire(self):                        # 
+        global typeLine
+        typeLine = 1
+#        App.Console.PrintMessage(str("on_RA_Wire ")+str(typeLine)+"\n")
+
+    def on_RA_BSpline(self):                     # 
+        global typeLine
+        typeLine = 0
+#        App.Console.PrintMessage(str("on_RA_BSpline ")+str(typeLine)+"\n")
+
+    def on_CH_Points(self):                     #
+        global affPoint
+        if self.CH_Points.isChecked(): 
+            affPoint = 1
+        else:
+            affPoint = 0
+#        App.Console.PrintMessage(str("on_CH_Points ")+"\n")
+
+    def on_CH_Reverse(self):                     #
+        global spireReverse
+        if self.CH_Reverse.isChecked(): 
+            spireReverse = 1
+        else:
+            spireReverse = 0
+#        App.Console.PrintMessage("on_CH_Reverse " + str(spireReverse)+"\n")
+
+    def on_DS_Radius_2_Cone(self,value):         # Diametre num 2 , Helix Conique
+        global rayon
+        global numberSpires
+        global helixS
+        global radiusS
+        global radius_2_Cone
+        global spireConeUne
+        global spireConeComp
+        global lissageS
+
+        if self.CH_Cone.isChecked():
+            numberSpires = self.DS_Numb_Spires.value()
+
+            numberSpires += 1
+            self.S_Numbering_Spire.setMaximum(numberSpires)
+            helixS = []
+            del helixS[:]
+            helixS = (numberSpires)*[pas]
+            radiusS = []
+            del radiusS[:]
+            radiusS = (numberSpires)*[rayon]
+            lissageS = []
+            del lissageS[:]
+            lissageS = numberSpires*[0]
+
+            if value < rayon:
+                radius_2_Cone = value = rayon
+            radius_2_Cone = value
+            self.DS_Radius_2_Cone.setValue(radius_2_Cone)
+            if numberSpires != 1:
+                spireConeUne = 0
+                cone = (radius_2_Cone - rayon) / (numberSpires -1)# +1 
+                for i in range(numberSpires):
+                    radiusS[i] = rayon + (cone * (i)) #  
+            else:
+                spireConeUne = 1
+            spireConeComp = 1
+#        App.Console.PrintMessage(str("on_DS_Radius_2_Cone ")+str(radius_2_Cone)+" "+str(spireConeUne)+"\n")
+
+    def on_CH_Cone(self):                      # Cone
+        global radius_2_Cone
+        global rayon
+        if self.CH_Cone.isChecked():
+            self.DS_Radius_2_Cone.setEnabled(True)
+        else:
+            self.DS_Radius_2_Cone.setEnabled(False)
+        radius_2_Cone = rayon
+        self.DS_Radius_2_Cone.setValue(radius_2_Cone)
+#        App.Console.PrintMessage(str("on_CH_Cone")+"\n")
+
+    def on_S_Numbering_Spire(self,value):        # numero de la spire a modifier
+        global numberSpires
+        global numberSpiresModified
+        global lissageSpire
+        self.S_Numbering_Spire.setMaximum(numberSpires)
+        numberSpiresModified = value
+        lissageSpire = 0
+        self.S_Lissage.setValue(lissageSpire)
+        self.S_Lissage.setVisible(False)
+        self.CH_Smooting.setVisible(True)
+        self.CH_Smooting.setChecked(False)
+#        App.Console.PrintMessage(str("on_S_Nubering_Spire ")+str(numberSpiresModified)+"\n")
+
+    def on_CH_Smooting(self):
+        global lissageSpire
+        global precision
+        self.S_Lissage.setVisible(True)
+        self.CH_Smooting.setVisible(False)
+        self.CH_Smooting.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                              "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                              "The finish and precision are influenced by this value"+"\n"+
+                                              "PS: The result can be satisfying or completely wrong (prototype state)"))
+        lissageSpire = 0
+#        if self.S_Lissage.isVisible():
+#            lissageSpire = 1
+#        App.Console.PrintMessage("on_CH_Smooting "+str(lissageSpire)+"\n")
+
+    def on_S_Lissage(self,value):                # option lissageS des raccords
+        global lissageSpire
+        global precision
+        lissageSpire = value
+        self.S_Lissage.setMaximum(int(360/precision)-1)
+        self.S_Lissage.setToolTip(_fromUtf8("Smoothing the line if the difference between two coils"+"\n"+
+                                              "The maximum value is egual of the precision number point given -1 (" + str(int(360/precision)-1)+")"+"\n"+
+                                              "The finish and precision are influenced by this value"+"\n"+
+                                              "PS: The result can be satisfying or completely wrong (prototype state)"))
+#        App.Console.PrintMessage(str("on_S_Lissage ")+str(lissageSpire)+"\n")
+
+    def on_DS_Pas_Spire(self,value):             # pas (pitch) de la spire a modifier
+        global pasSpire
+        pasSpire = value
+#        App.Console.PrintMessage(str("on_DS_Pas_Spire ")+str(pasSpire)+"\n")
+
+    def on_PU_To_Pas(self):                      # aligne le pas (pitch) de la spire
+        global pasSpire
+        global pas
+        pasSpire = pas
+        self.DS_Pas_Spire.setValue(pasSpire)
+#        App.Console.PrintMessage(str("on_PU_To_Pas ")+str(pasSpire)+"\n")
+
+    def on_DS_Radius_Spire(self,value):          # pas (pitch) du rayon a modifier
+        global rayonSpire
+        rayonSpire = value
+#        App.Console.PrintMessage(str("on_DS_Radius_Spire ")+str(rayonSpire)+"\n")
+
+    def on_PU_To_Radius(self):                   # aligne le rayon
+        global rayonSpire
+        global rayon
+        rayonSpire = rayon
+        self.DS_Radius_Spire.setValue(rayonSpire)
+#        App.Console.PrintMessage(str("on_PU_To_Radius_Value ")+str(rayonSpire)+"\n")
+
+    def on_PU_Accept_Value(self):                # accepter la modification de la spire
+        global numberSpiresModified
+        global numberSpires
+        global pasSpire
+        global rayonSpire
+        global helixS
+        global radiusS
+        global lissageSpire
+        global lissageS
+        if rayonSpire != 0:
+            if numberSpiresModified == 1:
+                helixS[0] = pasSpire
+                radiusS[0]= rayonSpire
+                lissageS[0] = lissageSpire
+                self.textEdit.append("Coil number " + str(numberSpiresModified) + " = " + str(helixS[0]) + " " + str(radiusS[0]) + " " + str(lissageS[0]))
+                App.Console.PrintMessage("Coil number " + str(numberSpiresModified) + " = " + str(helixS[0]) + " " + str(radiusS[0]) + " " + str(lissageS[0])+"\n")
+            else:
+                helixS[numberSpiresModified-1] = pasSpire
+                radiusS[numberSpiresModified-1]= rayonSpire
+                lissageS[numberSpiresModified-1] = lissageSpire
+                self.textEdit.append("Coil number " + str(numberSpiresModified) + " = " + str(helixS[numberSpiresModified-1]) + " " + str(radiusS[numberSpiresModified-1]) + " " + str(lissageS[numberSpiresModified-1]))
+                App.Console.PrintMessage("Coil number " + str(numberSpiresModified) + " = " + str(helixS[numberSpiresModified-1]) + " " + str(radiusS[numberSpiresModified-1]) + " " + str(lissageS[numberSpiresModified-1])+"\n")
+    
+            self.S_Lissage.setValue(0)
+            self.S_Lissage.setVisible(False)
+            self.CH_Smooting.setVisible(True)
+            self.CH_Smooting.setChecked(False)
+            lissageSpire = 0
+        else:
+            self.textEdit.setTextColor(QColor("red"))
+            self.textEdit.append("Coil number " + str(numberSpiresModified) + " Radius zero not allowed do " )
+            self.textEdit.setTextColor(QColor("Base"))
+            App.Console.PrintError("Coil number " + str(numberSpiresModified) + " Radius zero not allowed do "+"\n")
+#        App.Console.PrintMessage(str("on_PU_Accept_Value ")+"\n")
+
+    def on_PB_Loupe(self):                        # 
+        global zoom
+        if zoom == 140:
+            zoom = 20
+            self.textEdit.setGeometry(QtCore.QRect(20, zoom, 211, 171))
+        else:
+            zoom = 140
+            self.textEdit.setGeometry(QtCore.QRect(20, zoom, 211, 51))
+#        App.Console.PrintMessage("on_PB_Loupe "+"\n")
+
+    def on_PU_Quit(self):                        # Quit
+        App.Console.PrintMessage("\n"+"Fin FCSpring_Helix_Variable"+"\n"+"___________________________"+"\n")
+        self.window.hide()
+#        App.Console.PrintMessage(str(" ")+str()+"\n")
+
+    def on_PU_Read(self):          # lecture
+        global path
+        global numberSpires
+        global rayon
+        global pas
+        global precision
+        global typeLine
+        global affPoint
+        global helixS
+        global radiusS
+        global debutAngle
+        global finAngle
+        global modifyAngle
+        global radius_2_Cone
+        global spireConeUne
+        global spireConeComp
+        global spireReverse
+        global lissageS
+        global fichierOpen
+        global nomF
+
+        OpenName = ""
+        try:
+            OpenName = QFileDialog.getOpenFileName(None,QString.fromLocal8Bit("Read a file FCSpring"),path,"*.FCSpring") # PyQt4
+        except Exception:
+            OpenName, Filter = PySide.QtGui.QFileDialog.getOpenFileName(None, "Read a file FCSpring", path, "*.FCSpring")#PySide
+        try:
+            if OpenName != "":
+                try:
+                    file = open(OpenName, "r") # read
+                    Header = file.readline().rstrip('\n\r')                                                                #1
+                    if (Header == "FCString") or (Header == "FCString2") or (Header == "FCString3") or (Header == "FCString4"):
+                        a = ui
+                        a.on_PU_Reset(0)
+                        App.Console.PrintMessage("____________________"+"\n")
+
+                        self.textEdit.clear()
+                        op = OpenName.split("/")
+                        op2 = op[-1].split(".")
+                        nomF = op2[0]
+
+                        App.Console.PrintMessage(str(nomF)+"\n")
+                        App.Console.PrintMessage(str(Header)+"\n")
+                        numberSpires = file.readline().rstrip('\n\r')                                                      # 2
+                        numberSpires = int(numberSpires)
+                        self.DS_Numb_Spires.setValue(numberSpires)
+                        App.Console.PrintMessage(str(numberSpires)+"\t"+"Number coil"+"\n")
+
+                        rayon = file.readline().rstrip('\n\r')                                                             # 3
+                        rayon = float(rayon)
+                        radiusS = numberSpires*[rayon]
+                        self.DS_Radius_Sping.setValue(rayon)
+                        App.Console.PrintMessage(str(rayon)+"\t"+"Radius"+"\n")
+
+                        pas = file.readline().rstrip('\n\r')                                                               # 4
+                        pas = float(pas)
+                        helixS = numberSpires*[pas]
+                        self.DS_Pas_Spring.setValue(pas)
+                        App.Console.PrintMessage(str(pas)+"\t"+"Pitch"+"\n")
+
+                        precision = file.readline().rstrip('\n\r')                                                         # 5
+                        precision = float(precision)
+                        self.DS_Precision_Turn.setValue(precision)
+#                        self.label_5.setText(_fromUtf8("Precision = " + str(int(360/precision)) + " points"))
+                        App.Console.PrintMessage(str(precision)+"\t"+"Precision"+"\n")
+
+                        if (Header == "FCString3") or (Header == "FCString4"):
+                            typeLine, spireReverse = file.readline().rstrip(',\n\r').split()                               # 6 
+                            spireReverse = int(spireReverse)
+                            if spireReverse == 0:
+                                self.CH_Reverse.setChecked(False)
+                            else:
+                                self.CH_Reverse.setChecked(True)
+                        else:
+                            typeLine = file.readline().rstrip('\n\r')
+
+                        typeLine = int(typeLine)
+                        if typeLine == 0:
+                            self.RA_BSpline.setChecked(True)
+                        else:
+                            self.RA_Wire.setChecked(True)
+                        if (Header == "FCString2") or (Header == "FCString3") or (Header == "FCString4"):
+                            self.CH_Points.setChecked(False) # reset point
+                            affPoint = 0
+
+                            debutAngle = file.readline().rstrip('\n\r')                                                     # 7
+                            debutAngle = int(debutAngle)
+                            self.S_Begin_Angle.setValue(int(debutAngle))
+
+                            finAngle = file.readline().rstrip('\n\r')                                                       # 8
+                            finAngle = int(finAngle)
+                            self.S_End_Angle.setValue(int(finAngle))
+
+                            modifyAngle = file.readline().rstrip('\n\r')                                                    # 9
+                            modifyAngle = int(modifyAngle)
+                            if modifyAngle == 1:
+                                self.CH_B_E_Angle.setChecked(True) 
+                                fichierOpen = 1
+                            else:
+                                self.CH_B_E_Angle.setChecked(False)
+                                fichierOpen = 0
+                            a = ui
+                            a.on_CH_B_E_Angle()
+                            try:
+                                sp, sc, ra = file.readline().rstrip(',\n\r').split()                                        # 10
+                                spireConeUne  = int(sp)   # cone
+                                spireConeComp = int(sc)   # compensation
+                                radius_2_Cone = float(ra) # radius 2 cone
+                            except Exception:
+                                spireConeUne  = 0
+                                spireConeComp = 0
+                                radius_2_Cone = 0
+
+                            if (spireConeUne == 1) or (spireConeComp == 1):
+                                self.DS_Radius_2_Cone.setEnabled(True)
+                                self.DS_Radius_2_Cone.setValue(radius_2_Cone)
+                                self.CH_Cone.setChecked(True)
+                                self.label_2.setText("Number real ("+str(numberSpires - 1)+")")
+                                self.label_2.setToolTip(_fromUtf8("The number of coil for a spring conical registered"+"\n" 
+                                                                  "is number of coil displayed minus 1"))
+                            else:
+                                self.DS_Radius_2_Cone.setEnabled(False)
+                                self.DS_Radius_2_Cone.setValue(rayon)
+                                self.CH_Cone.setChecked(False)
+#                                self.CH_Cone.setEnabled(False)
+                                self.label_2.setText("Number of coil")
+                                self.label_2.setToolTip(_fromUtf8("Number of coil"))
+                            App.Console.PrintMessage(str(spireConeUne)+" "+str(radius_2_Cone)+"\t"+"Radius cone"+"\n\n")
+                      
+                        dummy = file.readline().rstrip('\n\r')                                                               # 11
+
+                        del lissageS[:]
+                        lissageS = numberSpires*[0]
+
+                        i = 0
+                        for ligne in file:
+                            if (Header == "FCString4"):
+                                a , b , c = ligne.rstrip('\n\r').split()
+                                helixS[i]   = float(a)
+                                radiusS[i]  = float(b)
+                                lissageS[i] = int(c)
+                                App.Console.PrintMessage(str(i+1)+":  "+str(helixS[i])+"   "+str(radiusS[i])+"   "+str(lissageS[i])+"\n")
+                                self.textEdit.append("Coil number " + str(i+1) + " = " + str(helixS[i]) + " " + str(radiusS[i])+"   "+str(lissageS[i])) # 12
+                            else:
+                                a , b = ligne.rstrip('\n\r').split()
+                                helixS[i] = float(a)
+                                radiusS[i] = float(b)
+                                App.Console.PrintMessage(str(i+1)+":  "+str(helixS[i])+"   "+str(radiusS[i])+"\n")
+                                self.textEdit.append("Coil number " + str(i+1) + " = " + str(helixS[i]) + " " + str(radiusS[i]))                        # 12
+                            i += 1
+                        App.Console.PrintMessage("____________________"+"\n")
+                        self.textEdit.verticalScrollBar().setValue(0)          # 
+                        self.textEdit.verticalScrollBar().setSliderPosition(0) #
+
+                    else:
+                        self.PU_Reload.setEnabled(False)
+                        App.Console.PrintMessage("Error file not FCSpring or not FCSpring2.3.4"+"\n")
+                        errorDialog("Error file not FCSpring or not FCSpring2.3.4 "+"\n")
+                finally:
+                    file.close()
+
+                self.label_11_Name.setText(str(nomF))
+        except Exception:
+            App.Console.PrintMessage("Error in reading the file "+OpenName+"\n")
+            errorDialog("Error in reading the file "+OpenName)
+
+    def on_PU_Save(self):           # enregistrement
+        global path
+        global numberSpires
+        global rayon
+        global pas
+        global precision
+        global typeLine
+        global helixS
+        global radiusS
+        global debutAngle
+        global finAngle
+        global modifyAngle
+        global radius_2_Cone
+        global spireConeUne
+        global spireConeComp
+        global spireReverse
+        global lissageS
+
+        SaveName = ""
+        try:
+            SaveName = QFileDialog.getSaveFileName(None,QString.fromLocal8Bit("Save a file FCSpring"),path,"*.FCSpring")    # PyQt4
+        except Exception:
+            SaveName, Filter = PySide.QtGui.QFileDialog.getSaveFileName(None, "Save a file FCSpring", path, "*.FCSpring")   # PySide
+        if SaveName == "":
+            App.Console.PrintMessage("Process aborted"+"\n")
+            errorDialog("Process aborted")
+        else:
+            App.Console.PrintMessage("Registration of "+SaveName+"\n")
+            self.label_11_Name.setText(SaveName)
+            try:
+                file = open(SaveName, 'w') # write
+                try:
+                    file.write("FCString4"+"\n")                                  # 1
+                    file.write(str(numberSpires)+"\n")                            # 2
+                    file.write(str(rayon)+"\n")                                   # 3
+                    file.write(str(pas)+"\n")                                     # 4
+                    file.write(str(precision)+"\n")                               # 5
+                    file.write(str(typeLine)+"\t"+str(spireReverse)+"\n")         # 6
+                    file.write(str(debutAngle)+"\n")                              # 7
+                    file.write(str(finAngle)+"\n")                                # 8
+                    file.write(str(modifyAngle)+"\n")                             # 9
+                    file.write(str(spireConeUne)+"\t"+str(spireConeComp)+"\t"+str(radius_2_Cone)+"\n")             # 10
+                    file.write("Coil"+"\t"+"Radius"+"\t"+"Smooting"+"\t"+"(If you change the file, always use Tab no space)"+"\n") # 11
+                    for i in range(numberSpires):
+                        file.write(str(helixS[i])+"\t"+str(radiusS[i])+"\t"+str(lissageS[i])+"\n")                 # 12
+                finally:
+                    file.close()
+            except Exception:
+                App.Console.PrintMessage("Error Registration file "+SaveName+"\n")
+                errorDialog("Error Registration file "+SaveName)
+
+    def on_PU_Save_Coord(self):                      # Save coordinates x y z
+        global points
+        SaveName = ""
+        if len(points) > 2:
+            try:
+                SaveName = QFileDialog.getSaveFileName(None,QString.fromLocal8Bit("Save a file FCSpringCoor"),path,"*.FCSpringCoor")    # PyQt4
+            except Exception:
+                SaveName, Filter = PySide.QtGui.QFileDialog.getSaveFileName(None, "Save a file FCSpringCoor", path, "*.FCSpringCoor")   # PySide
+            if SaveName == "":
+                App.Console.PrintMessage("Process aborted"+"\n")
+                errorDialog("Process aborted")
+            else:
+                App.Console.PrintMessage("Registration of "+SaveName+"\n")
+                self.label_11_Name.setText(SaveName)
+                try:
+                    file = open(SaveName, 'w') # write
+                    try:
+                        for i in points:
+                            file.write(str(i[0])+" "+str(i[1])+" "+str(i[2])+"\n")                                # save the coordinates x y z
+                    finally:
+                        file.close()
+                except Exception:
+                    App.Console.PrintMessage("Error Registration file "+SaveName+"\n")
+                    errorDialog("Error Registration file "+SaveName)
+        else:
+            App.Console.PrintError("Not data to save"+"\n")
+#        App.Console.PrintMessage("on_PU_Save_Coord"+"\n")
+
+    def on_PU_Read_Coord(self):                      # Read coordinates x y z
+        global typeLine
+        global nomF
+        global points
+
+        OpenName = ""
+        try:
+            OpenName = QFileDialog.getOpenFileName(None,QString.fromLocal8Bit("Read a file FCSpringCoor"),path,"*.FCSpringCoor") # PyQt4
+        except Exception:
+            OpenName, Filter = PySide.QtGui.QFileDialog.getOpenFileName(None, "Read a file FCSpringCoor", path, "*.FCSpringCoor")#PySide
+        try:
+            if OpenName != "":
+                try:
+                    file = open(OpenName, "r") # read
+                    a = ui
+                    a.on_PU_Reset(0)
+                    App.Console.PrintMessage("____________________"+"\n")
+
+                    self.DS_Numb_Spires.setValue(numberSpires)
+                    self.DS_Pas_Spring.setValue(pas)
+                    self.DS_Radius_Sping.setValue(rayon)
+
+                    #### Chrono begin ##################################
+                    depart = time.clock()     # chrono begin          ##
+                    ####################################################
+
+                    self.textEdit.clear()
+                    op = OpenName.split("/")
+                    op2 = op[-1].split(".")
+                    nomF = op2[0]
+                    points = []
+                    del points[:]
+                    App.Console.PrintMessage(str(nomF)+"\n")
+
+                    self.PU_Accept_Value.setVisible(False)
+                    self.PBA_progressBar.setVisible(True)
+                    self.PBA_progressBar.setMaximum(0)
+                    self.PBA_progressBar.setMinimum(0)
+#                    self.PBA_progressBar.setValue(0)
+                    X = Y = Z = 0.0
+                    for ligne in file:
+                        X , Y , Z = ligne.rstrip('\n\r').split()
+                        points.append(FreeCAD.Vector(float(X),float(Y),float(Z))) # append the coordinates
+
+                    if typeLine == 1:
+                        ressort = Draft.makeWire(points,closed=False,face=False,support=None)# creation spring makeWire
+                    else:
+#                        ressort = Draft.makeBSpline(points,closed=False)                     # creation spring Draft " makeBSpline "
+                        ressort = Part.BSplineCurve()                                        # creation spring Part  " BSplineCurve "
+                        ressort.interpolate(points,False)
+                        ressort0 = Part.Edge(ressort)
+                        Part.show(ressort0)
+            
+                    App.ActiveDocument.ActiveObject.Label =  "Spring_" + unicode(nomF)
+                    FreeCAD.ActiveDocument.recompute()
+            
+                    self.PBA_progressBar.setVisible(False)
+                    self.PU_Accept_Value.setVisible(True)
+
+                    #### Chrono end ####################################
+                    arrivee = time.clock()                                                                    # chrono end
+                    App.Console.PrintMessage("Time : "+str("%.2f" % ((arrivee - depart)/60))+" min"+"\n\n")   # chrono end
+                    ####################################################
+
+                finally:
+                    file.close()
+ 
+                self.label_11_Name.setText(str(nomF))
+                self.textEdit.append("Coordinates file")# + "\n")
+                self.textEdit.setTextColor(QColor("blue"))
+#                self.textEdit.setTextColor(QColor(0,0,127))
+                self.textEdit.append("PS: For Info The values showing in the configuration menu do not match the data of the spring"+"\n")
+                self.textEdit.setTextColor(QColor("Base"))
+
+        except Exception:
+            App.Console.PrintMessage("Error in reading the file "+OpenName+"\n")
+            errorDialog("Error in reading the file "+OpenName)
+#        App.Console.PrintMessage("on_PU_Read_Coord"+"\n")
+
+    def on_PU_Launch(self):                      # Execute
+        global numberSpires
+        global rayon
+        global pas
+        global precision
+        global typeLine
+        global helixS
+        global pasSpire
+        global radiusS
+        global affPoint
+        global debutAngle
+        global finAngle
+        global modifyAngle
+        global radius_2_Cone
+        global spireConeUne
+        global spireConeComp
+        global spireReverse
+        global lissageSpire
+        global lissageS
+        global points
+        global nomF
+
+        if rayon != 0:
+            doc = FreeCAD.ActiveDocument
+            if doc == None:
+                doc = FreeCAD.newDocument()
+    
+            sel = FreeCADGui.Selection.getSelection()   
+    
+            #### Chrono begin ##################################
+            depart = time.clock()     # chrono begin          ##
+            ####################################################
+    
+            self.PU_Accept_Value.setVisible(False)
+            self.PBA_progressBar.setVisible(True)
+            self.PBA_progressBar.setMaximum(numberSpires * (360 / int(precision)))
+            self.PBA_progressBar.setValue(0)
+    
+            coor_X = coor_Y = coor_Z = 0.0
+            angleTr  = 0
+            points   = []
+            del   points[:]
+            pas2 = 0.0
+            PBA = 0                                                          # compteur PgrogressBar
+    #        App.Console.PrintMessage("____________________"+"\n")
+            App.Console.PrintMessage("Precision   " + str(precision)+"\n")
+            App.Console.PrintMessage("DebutAngle  " + str(debutAngle)+"\n")
+            App.Console.PrintMessage("FinAngle    " + str(finAngle)+"\n")
+            App.Console.PrintMessage("List Helix  " + str(helixS)+"\n")
+            App.Console.PrintMessage("List Radius " + str(radiusS)+"\n")
+            App.Console.PrintMessage("List Smoot1 " + str(lissageS)+"\n")
+    
+            for spir in range(numberSpires-spireConeComp):                   # number spires Helix
+                pas2 = helixS[spir]
+                PBA += 1
+    
+                if spir <> numberSpires-1:                                   # pas travail normal
+                    pastr = ((radiusS[spir + 1]-radiusS[spir]) / (360/precision))
+                elif spireConeUne == 1:                                      # cone une seule spire
+                    pastr = (radius_2_Cone / (360/precision))
+                else:
+                    pastr = 0.0
+    
+                pasRadius = radiusS[spir] # pas pour le rayon
+                i = 0
+                debutAngleX = 0
+                finAngleX   = 360
+    
+                if modifyAngle == 1:
+                    if (spir == 0) :
+                        debutAngleX = debutAngle
+    
+                if (spir == numberSpires - 1 - spireConeComp): #or (spir == numberSpires):
+                    finAngleX  = finAngle + int(precision)
+    
+                for angleTr in range(0,finAngleX,int(precision)):                   # boucle for 1 turn (360/precision) degrees
+                    pasRadius = radiusS[spir]+((pastr*i))
+                    i+=1
+                    self.PBA_progressBar.setValue( PBA )
+                    PBA += 1
+                    
+                    vecligne=[FreeCAD.Vector(0,0,0),FreeCAD.Vector(pasRadius ,0.0,0.0)]
+                    ligne = Draft.makeWire(vecligne,closed=False,face=False,support=None) #creation de la ligne de base
+    
+                    if spireReverse == 0:        # counterclockwise
+                        ligne.Placement = FreeCAD.ActiveDocument.Line.Placement=App.Placement(App.Vector(0.0,0.0,0.0), App.Rotation(App.Vector(0,0,1),angleTr), App.Vector(0,0,0))
+                    else:                        # clockwise direction
+                        ligne.Placement = FreeCAD.ActiveDocument.Line.Placement=App.Placement(App.Vector(0.0,0.0,0.0), App.Rotation(App.Vector(0,0,1),-angleTr), App.Vector(0,0,0))
+                
+                    a = ligne.Shape.Edges[0].Vertexes[1]                             # fin de ligne
+                    coor_X = (a.Point.x)
+                    coor_Y = (a.Point.y)
+    
+                    if angleTr >= debutAngleX:
+                        points += [FreeCAD.Vector(coor_X,coor_Y,coor_Z)]             # coordinates makeBSpline contener
+    
+                    if (affPoint == 1) and (angleTr >= debutAngleX):
+                        point = Draft.makePoint(coor_X,coor_Y,coor_Z)                # create point repere for test
+                        FreeCADGui.activeDocument().getObject(point.Name).PointColor = (1.0,0.0,0.0)
+    
+                    coor_Z += (pas2 / (360/precision))                               # pas of spring
+    
+                    App.ActiveDocument.removeObject(ligne.Name)                      # remove ligne de base directrice
+            
+############# Smooting begin  ### prototype#############################################################################################
+    
+            if (numberSpires >= 2) and (sum(lissageS[:]) != 0):
+    
+                compBar = compBar1 = 0                    # progressBar
+                compBar = sum(lissageS[:])                # progressBar
+                self.PBA_progressBar.setMaximum(compBar)  # progressBar
+                self.PBA_progressBar.setValue(0)          # progressBar
+        
+                decalageM = 0                                                             # decalage montant
+                pointTravailBase = int(360/precision)                                     # nombre de points dans la boucle
+        
+                if debutAngle != 0:
+                    decalageM = (pointTravailBase - int((360-debutAngle)/precision))              # decalageM debutAngle
+                    if lissageS[0] != 0:                                                          # lissage spire 1
+                        if lissageS[0] > int((360-debutAngle)/precision):
+                            lissageS[0] = int((360-debutAngle)/precision) - 1
+
+                    if (lissageS[1] != 0):                                                        # lissage spire 2
+                        if lissageS[1] > int((360-debutAngle)/precision):
+                            lissageS[1] = int((360-debutAngle)/precision) - 1
+    
+                if finAngle != 360:
+                    if lissageS[-1] != 0:                                                         # lissage derniere spire 
+                        if lissageS[-1] > (pointTravailBase - int((360-finAngle)/precision)):
+                            lissageS[-1] = (pointTravailBase - int((360-finAngle)/precision)) - 1
+    
+                    if lissageS[-2] != 0:                                                         # lissage avant derniere spire 
+                        if lissageS[-2] > (pointTravailBase - int((360-finAngle)/precision)):
+                            lissageS[-2] = (pointTravailBase - int((360-finAngle)/precision)) - 1
+
+                    try:
+                        if (lissageS[-3] != 0) and ((spireConeUne == 1) or (spireConeComp == 1)):     # lissage avant derniere spire cas cone (N_spire-1)
+                            if lissageS[-3] > (pointTravailBase - int((360-finAngle)/precision)):
+                                lissageS[-3] = (pointTravailBase - int((360-finAngle)/precision)) - 1
+                    except Exception:
+                        None
+                        App.Console.PrintError("0Error smooting"+"\n")
+
+                ############################################# lissage Gauche Superieur
+    
+                x0 = 2                                                                    # division premiere spire
+                x1 = 0                                                                    # avance G/D
+                x2 = 1                                                                    # largeur en points
+                x3 = 2                                                                    # division  
+
+                for ii in range(1 , numberSpires):
+                    pointTravail = pointTravailBase * ii
+                    compBar1 += 1                                                         # progressBar
+                    self.PBA_progressBar.setValue(compBar1)                               # progressBar
+                   
+                    if lissageS[ii-1] != 0:
+                        x1 = 0    # avance G/D
+                        boucler = lissageS[ii-1]
+    
+                        if (ii-1 == 0) and (debutAngle != 0):                             # nombre de points
+                            if (boucler) > (pointTravailBase - int((360-debutAngle)/precision)):
+                                boucler = lissageS[0] - (pointTravailBase - int((360-debutAngle)/precision))
+    
+                        try:
+                            for i in (range(boucler)):
+                                compBar1 += 1                                             # progressBar
+                                self.PBA_progressBar.setValue(compBar1)                   # progressBar
+                                if i == 0:
+                                    a = points[pointTravail-1-decalageM][2]  # G          # C
+                                    b = points[pointTravail+1-decalageM][2]  # D          # C
+                                    c = (((b - a)/x0) + a)                                # C
+                                    points[pointTravail+(i)-decalageM][2] = c             # C
+                                    #Draft.makePoint(points[pointTravail-decalageM])       # C    # create point
+                                else:
+                                    x1 += 1
+                                    a = points[pointTravail+(x1-x2)-decalageM][2]  # G    # D
+                                    b = points[pointTravail+(x1+x2)-decalageM][2]  # D    # D
+                                    c = (((b - a)/x3) + a)                      # D
+                                    points[pointTravail+(x1)-decalageM][2] = c            # D
+                                    #Draft.makePoint(points[pointTravail+(x1)-decalageM])  # D    # create point
+            
+                                    a = points[pointTravail+(-x1-x2)-decalageM][2]  # G   # G
+                                    b = points[pointTravail+(-x1+x2)-decalageM][2]  # D   # G
+                                    c = (((b - a)/x3) + a)                               # G
+                                    points[pointTravail+(-x1)-decalageM][2] = c           # G
+                                    #Draft.makePoint(points[pointTravail+(-x1)-decalageM]) # G    # create point
+                        except Exception:
+                            App.Console.PrintError("Error1 smooting coil num : "+str(ii)+"  value : "+str(lissageS[ii-1])+"\n"+
+                                                   "Choose a lower smoothing value"+"\n")
+        
+                ############################################# lissage Droit Inferieur
+
+                compBar1 = 0
+                for ii in range(1 , numberSpires):
+                    pointTravail = pointTravailBase * (ii )
+                    compBar1 += 1                                                             # progressBar
+                    self.PBA_progressBar.setValue(compBar1)                                   # progressBar
+        
+                    if lissageS[ii] != 0:
+                        x1 = 0    # avance G/D
+                        boucler = lissageS[ii]
+        
+                        try:
+                            for i in (range(boucler)):
+                                compBar1 += 1                                                 # progressBar
+                                self.PBA_progressBar.setValue(compBar1)                       # progressBar
+                                if i == 0:
+                                    a = points[pointTravail-1-decalageM][2]  # G              # C
+                                    b = points[pointTravail+1-decalageM][2]  # D              # C
+                                    c = (((a - b)/x0) + b)                                    # C
+                                    points[pointTravail+(i)-decalageM][2] = c                 # C
+                                    #Draft.makePoint(points[pointTravail-decalageM])           # C    # create point
+                                else:
+                                    #############################################             # lissage Gauche Sup
+                                    x1 += 1
+                                    a = points[pointTravail+(x1-x2)-decalageM][2]  # G        # D
+                                    b = points[pointTravail+(x1+x2)-decalageM][2]  # D        # D
+                                    c = (((a - b)/x3) + b)                      # D
+                                    points[pointTravail+(x1)-decalageM][2] = c                # D
+                                    #Draft.makePoint(points[pointTravail+(x1)-decalageM])      # D    # create point
+            
+                                    a = points[pointTravail+(-x1-x2)-decalageM][2]  # G       # G
+                                    b = points[pointTravail+(-x1+x2)-decalageM][2]  # D       # G
+                                    c = (((a - b)/x3) + b)                      # G
+                                    points[pointTravail+(-x1)-decalageM][2] = c               # G
+                                    #Draft.makePoint(points[pointTravail+(-x1)-decalageM])     # G    # create point
+                        except Exception:
+                            App.Console.PrintError("Error2 smooting coil num : "+str(ii)+"  value : "+str(lissageS[ii-1])+"\n"+
+                                                   "Choose a lower smoothing value"+"\n")
+    
+                App.Console.PrintMessage("List Smoot2 " + str(lissageS)+"\n")
+                App.Console.PrintMessage("____________________"+"\n")
+    
+############ Smooting end ##########################################################################################################
+    
+            if typeLine == 1:
+                ressort = Draft.makeWire(points,closed=False,face=False,support=None)# creation spring makeWire
+            else:
+#                ressort = Draft.makeBSpline(points,closed=False)                     # creation spring Draft " makeBSpline "
+                ressort = Part.BSplineCurve()                                        # creation spring Part  " BSplineCurve "
+                ressort.interpolate(points,False)
+                ressort0 = Part.Edge(ressort)
+                Part.show(ressort0)
+
+            if nomF != "Name File": # name file
+                App.ActiveDocument.ActiveObject.Label =  "Spring_" + nomF
+            else:
+                App.ActiveDocument.ActiveObject.Label =  "Spring"
+
+            FreeCAD.ActiveDocument.recompute()
+    
+            self.PBA_progressBar.setVisible(False)
+            self.PU_Accept_Value.setVisible(True)
+            #### Chrono end ####################################
+            arrivee = time.clock()                                                                    # chrono end
+            App.Console.PrintMessage("Time : "+str("%.2f" % ((arrivee - depart)/60))+" min"+"\n\n")   # chrono end
+            ####################################################
+        else:
+            App.Console.PrintError("Radius zero not allowed do"+"\n")
+            self.textEdit.setTextColor(QColor("red"))
+            self.textEdit.append("Radius zero not allowed do " )
+            self.textEdit.setTextColor(QColor("Base"))
+####on_PU_Launch end ############################################################################################################
+        
+helixS = []
+del helixS[:]
+helixS = numberSpires*[pas]
+radiusS = []
+del radiusS[:]
+radiusS = numberSpires*[rayon]
+lissageS = []
+del lissageS[:]
+lissageS = numberSpires*[0]
+
+MainWindow = QtGui.QMainWindow()
+ui = Ui_MainWindow()
+ui.setupUi(MainWindow)
+MainWindow.show()

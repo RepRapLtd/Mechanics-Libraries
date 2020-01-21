@@ -1,0 +1,62 @@
+#
+# FreeCAD Python Macro to make M series nuts
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 22 April 2019
+#
+# Licence: GPL
+#
+
+import random
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+# Parameters
+
+#NB lengths are slightly longer than the standard
+
+#M2
+#flats = 4
+#length = 1.6
+
+#M2.5
+#flats = 5
+#length = 2
+
+#M3
+flats = 5.5
+#length = 2.5
+length = 10
+
+#M4
+#flats = 7
+#length = 3.25
+
+#M5
+#flats = 8
+#length = 5
+
+#M6
+#flats = 10
+#length = 5.25
+
+
+#********************************************************************************
+
+def hexagon(r, l):
+ c = Part.makeCylinder(2*r, l, Base.Vector(0,0,0), Base.Vector(0,0,1), 360)
+ b = Part.makeBox(2*r, 2*r, 1.2*l)
+ b.translate(Base.Vector(-r, r, -0.1*l))
+ a = b
+ ang=360/6
+ for i in range(1,6):
+  newshape = b.copy()   
+  newshape.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),i*ang)    
+  a = a.fuse(newshape)
+ a = c.cut(a)
+ return a
+
+b = hexagon(flats/2, length)
+Part.show(b)

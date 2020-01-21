@@ -1,0 +1,54 @@
+#
+# FreeCAD Python Macro to make a beehive for solitary bees.
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 22 April 2019
+#
+# Licence: GPL
+#
+
+import random
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+# Parameters
+
+rad = 3.5
+length = 130
+wall = 1.5
+h = 10
+v = 10
+
+#********************************************************************************
+
+def hexagon(r, l):
+ c = Part.makeCylinder(2*r, l, Base.Vector(0,0,0), Base.Vector(0,0,1), 360)
+ b = Part.makeBox(2*r, 2*r, 1.2*l)
+ b.translate(Base.Vector(-r, r, -0.1*l))
+ a = b
+ ang=360/6
+ for i in range(1,6):
+  newshape = b.copy()   
+  newshape.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),i*ang)    
+  a = a.fuse(newshape)
+ a = c.cut(a)
+ return a
+
+def nest():
+ n = hexagon(rad, length)
+ n.translate(Base.Vector(0, rad, 0))
+ x0 = 1
+ for y in range (0, v):
+  for x in range(x0, h):
+   xv = (2*rad+wall)*math.sqrt(3)*0.5*x
+   yv = (2*rad+wall)*y + (1 + x%2)*rad
+   hx = hexagon(rad, length)
+   hx.translate(Base.Vector(xv, yv, 0))
+   n = n.fuse(hx)
+  x0 = 0
+ return n
+
+b = nest()
+Part.show(b)

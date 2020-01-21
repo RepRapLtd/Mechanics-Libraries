@@ -1,0 +1,8 @@
+# -*- coding: utf-8 -*-
+
+# Macro Begin: /home/ensab/rrlOwncloud/RepRapLtd/Engineering/Mechanics-libraries/FreeCAD-Macros/d.FCMacro +++++++++++++++++++++++++++++++++++++++++++++++++
+import FreeCAD
+
+App.getDocument("Unnamed").removeObject("cylx10y20z")
+App.getDocument("Unnamed").recompute()
+# Macro End: /home/ensab/rrlOwncloud/RepRapLtd/Engineering/Mechanics-libraries/FreeCAD-Macros/d.FCMacro +++++++++++++++++++++++++++++++++++++++++++++++++

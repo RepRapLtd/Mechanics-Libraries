@@ -1,0 +1,233 @@
+#
+# FreeCAD Python Macro to cut a disc into regular printable joinable parts.
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 25 March 2019
+#
+# Licence: GPL
+#
+
+import random
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+# Parameters
+
+holes = False     # Whether RepRap logo holes are made
+radialN = 3      # The number of divisions radially (must be odd)
+angleN = 6      # The number of divisions round the circumference (must be even and greater than or equal to 4)
+thickness = 6.0    # Disc thickness (mm)
+innerR = 26.25     # The starting radius
+outerR = 99.0    # The ending radius
+overlap = 7.0      # The amount the plates overlap (mm)
+tapR = 1.4       # Screw tap radius (mm)
+clearR = 1.7     # Screw clearance radius (mm)
+headR = 3.2       # Screw countersink head radius
+screwLand = 1.0   # The depth of the screw clearance hole in the top pieces (mm)
+gap = 0.3        # The gap to allow for prints being slightly oversized (mm) 
+startBlank = 0   # No logo hole(s) at the start
+endBlank = 0    # No logo hole(s) at the end
+midBlank = 0    # No logo holes in the middle    
+
+# Derived quantities
+
+rIncrement = (outerR - innerR)/radialN
+aIncrement = 360.0/angleN
+halfLap = 0.5*overlap
+halfGap = 0.5*gap
+halfThickness = 0.5*thickness
+toDegrees = 180.0/(math.pi)
+toRadians = 1.0/toDegrees
+logoR = 0.5*(rIncrement - halfGap)/(1.0 + math.sqrt(2.0))
+
+#********************************************************************************
+
+# Throughout all this the n argument is the radial count of the sector under construction, from 0 
+# near the centre to radialN at the outer edge.  Note that the innermost and outermost
+# sectors have different form to those in the middle.
+
+def RepRapLogo(r, m):
+ c = Part.makeCylinder(r, thickness*2, Base.Vector(0,0,0), Base.Vector(0,0,1), 360)
+ b = Part.makeBox(r, r, thickness*2)
+ a = b.fuse(c)
+ a.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -45)
+ a.translate(Base.Vector(0,0,-1*thickness))
+ a.transformShape(m)
+ return a
+
+# Create the annulus that will form the larger sector with the screw holes
+
+def BigAnnulus(n):
+ inner = innerR + n*rIncrement + halfGap
+ outer = inner + rIncrement - halfGap
+ if n > 0:
+  inner = inner - halfLap
+ if n < radialN - 1:
+  outer = outer + halfLap
+ cInner = Part.makeCylinder(inner, halfThickness+2, Base.Vector(0,0,-1), Base.Vector(0,0,1), 360)
+ cOuter = Part.makeCylinder(outer, halfThickness, Base.Vector(0,0,0), Base.Vector(0,0,1), 360)
+ a = cOuter.cut(cInner)
+ return a
+
+# Create the annulus that will fill the full thickness
+ 
+def SmallAnnulus(n):
+ inner = innerR + n*rIncrement + halfGap
+ outer = inner + rIncrement - halfGap
+ if n > 0:
+  inner = inner + halfLap
+ if n < radialN - 1:
+  outer = outer - halfLap
+ cInner = Part.makeCylinder(inner, halfThickness+2, Base.Vector(0,0,-1), Base.Vector(0,0,1), 360)
+ cOuter = Part.makeCylinder(outer, halfThickness*1.1, Base.Vector(0,0,0), Base.Vector(0,0,1), 360)
+ cOuter.translate(Base.Vector(0,0,-0.1*halfThickness))
+ a = cOuter.cut(cInner)
+ return a
+
+# Create a sector that will intersect out the right part of the annular shapes
+
+def Sector(n):
+ aveR = innerR + (n + 0.5)*rIncrement
+ aAdd = toDegrees*2*math.atan(0.5*halfGap/aveR)
+ c1 = Part.makeBox(outerR*1.5, outerR*1.5, thickness*6)
+ c1.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), aAdd)
+ c2 = Part.makeBox(outerR*1.5, outerR*1.5, thickness*6)
+ c2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), aIncrement - aAdd - 90)
+ c3 = c1.common(c2)
+ c3.translate(Base.Vector(0, 0, -3*thickness))
+ return c3
+
+# Create screw tap holes along X axis to be rotated into place
+
+def TapHolesOrigin(n):
+ inner = innerR + n*rIncrement
+ outer = inner + rIncrement
+ if n > 0:
+  h1 = Part.makeCylinder(tapR, thickness, Base.Vector(0,0,-0.5*halfThickness), Base.Vector(0,0,1), 360)
+  h1.translate(Base.Vector(inner, 0, -halfThickness))
+ if n < radialN - 1:
+  h2 = Part.makeCylinder(tapR, thickness, Base.Vector(0,0,-0.5*halfThickness), Base.Vector(0,0,1), 360)
+  h2.translate(Base.Vector(outer, 0, -halfThickness))
+ if n == 0:
+  return h2
+ if n == radialN - 1:
+  return h1
+ hso = h1.fuse(h2)
+ return hso
+
+# Create the whole tap hole pattern
+
+def TapHoles(n):
+ th1 = TapHolesOrigin(n)
+ th2 = TapHolesOrigin(n)
+ th1.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 0.25*aIncrement)
+ th2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 0.75*aIncrement)
+ th = th1.fuse(th2)
+ return th
+
+# Create screw clearance holes with countersinks along X axis to be rotated into place
+
+def ClearHolesOrigin(n):
+ inner = innerR + n*rIncrement
+ outer = inner + rIncrement
+ if n > 0:
+  h1 = Part.makeCylinder(clearR, thickness, Base.Vector(0, 0, 0), Base.Vector(0,0,1), 360)
+  ha = Part.makeCylinder(headR, thickness, Base.Vector(0, 0, - headR + clearR - thickness), Base.Vector(0,0,1), 360)
+  hb = Part.makeCone(headR, clearR, headR - clearR)
+  hb.translate(Base.Vector(0, 0, - headR + clearR))
+  h1 = h1.fuse(ha)
+  h1 = h1.fuse(hb)
+  h1.translate(Base.Vector(inner, 0, -screwLand))
+ if n < radialN - 1:
+  h2 = Part.makeCylinder(clearR, thickness, Base.Vector(0, 0, 0), Base.Vector(0,0,1), 360)
+  hc = Part.makeCylinder(headR, thickness, Base.Vector(0, 0, - headR + clearR - thickness), Base.Vector(0,0,1), 360)
+  hd = Part.makeCone(headR, clearR, headR - clearR)
+  hd.translate(Base.Vector(0, 0, - headR + clearR))
+  h2 = h2.fuse(hc)
+  h2 = h2.fuse(hd)
+  h2.translate(Base.Vector(outer, 0, -screwLand))
+ if n == 0:
+  return h2
+ if n == radialN - 1:
+  return h1
+ hso = h1.fuse(h2)
+ return hso
+
+# Create the whole clearance hole pattern
+
+def ClearHoles(n):
+ th1 = ClearHolesOrigin(n)
+ th2 = ClearHolesOrigin(n)
+ th1.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), 0.25*aIncrement)
+ th2.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), 0.75*aIncrement)
+ th = th1.fuse(th2)
+ return th
+
+# All the RepRap Logos to subtract from the part
+
+def LogoMatrix(n, a):
+ aveR = innerR + (n + 0.5)*rIncrement 
+ m = Base.Matrix()
+ m.move(Base.Vector(aveR - logoR*(1 - 1/math.sqrt(2)), 0, 0))
+ if n%2 == 1:
+  ang = -0.5*aIncrement
+ else:
+  ang = 0
+ m.rotateZ((a + ang)*toRadians)
+ return m
+
+def RepRapLogos(n, shiftOneEigth):
+ aveR = innerR + (n + 0.5)*rIncrement
+ arc = aveR*aIncrement*toRadians
+ logoN = int(arc/(2.5*logoR)) - 1
+ if logoN%2 == 1:
+  logoN = logoN - 1
+ halfWay0 = logoN/2 - midBlank
+ halfWay1 = logoN/2 + midBlank
+ aLinc = aIncrement/(logoN)
+ a0 = (startBlank + 0.5)*aLinc
+ if shiftOneEigth:
+  a0 = a0 + 0.125*aIncrement
+ m = LogoMatrix(n, a0)
+ rrl = RepRapLogo(logoR, m)
+ for i in range(startBlank + 1, logoN - endBlank):
+  a0 = a0 + aLinc
+  if i < halfWay0 or i >= halfWay1:
+   m = LogoMatrix(n, a0)
+   rrl = rrl.fuse(RepRapLogo(logoR, m))
+ return rrl 
+ 
+
+# Create a whole sector. They are designed to screw together in an English-bond
+# pattern round the entire disc.
+
+def Brick(n):
+ shiftOneEigth = (n == radialN - 1)
+ sA = SmallAnnulus(n)
+ bA = BigAnnulus(n)
+ bA.translate(Base.Vector(0,0,-halfThickness))
+ bA = bA.fuse(sA) 
+ bS = Sector(n)
+ b = bS.common(bA)
+ if shiftOneEigth:
+  b.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), 0.125*aIncrement)
+ if n%2 == 1:
+  th = ClearHoles(n)
+  b = b.cut(th)
+  m = Base.Matrix()
+  m.rotateX(math.pi)
+  m.rotateZ(0.5*aIncrement*toRadians)
+  b.transformShape(m)
+ else:
+  th = TapHoles(n)
+  b = b.cut(th)
+ if holes:
+  r = RepRapLogos(n, shiftOneEigth)
+  b = b.cut(r)
+ return b
+
+
+b = Brick(0)
+Part.show(b)

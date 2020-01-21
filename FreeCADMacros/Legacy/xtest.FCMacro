@@ -1,0 +1,17 @@
+# -*- coding: utf-8 -*-
+
+# Macro Begin: /home/ensab/Ltd/Git/FreeCADMacros/xtest.FCMacro +++++++++++++++++++++++++++++++++++++++++++++++++
+import FreeCAD
+import Part
+
+App.getDocument("Unnamed").removeObject("Fusion001")
+App.getDocument("Unnamed").Box001.Placement=App.Placement(App.Vector(0,4,0), App.Rotation(App.Vector(0,1,0),-5), App.Vector(0,0,0)).multiply(App.getDocument("Unnamed").Box001.Placement)
+App.getDocument("Unnamed").Cylinder001.Placement=App.Placement(App.Vector(0,4,0), App.Rotation(App.Vector(0,1,0),-5), App.Vector(0,0,0)).multiply(App.getDocument("Unnamed").Cylinder001.Placement)
+App.activeDocument().addObject("Part::Fuse","Fusion001")
+App.activeDocument().Fusion001.Base = App.activeDocument().Box001
+App.activeDocument().Fusion001.Tool = App.activeDocument().Cylinder001
+#Gui.activeDocument().hide("Box001")
+#Gui.activeDocument().hide("Cylinder001")
+#Gui.ActiveDocument.Fusion001.ShapeColor=Gui.ActiveDocument.Box001.ShapeColor
+#Gui.ActiveDocument.Fusion001.DisplayMode=Gui.ActiveDocument.Box001.DisplayMode
+# Macro End: /home/ensab/Ltd/Git/FreeCADMacros/xtest.FCMacro +++++++++++++++++++++++++++++++++++++++++++++++++

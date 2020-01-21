@@ -1,0 +1,11 @@
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+#Make Cylinder Sectors
+
+r=5
+l=10
+a=270
+
+c = Part.makeCylinder(r, l, Base.Vector(0,0,0), Base.Vector(0,0,1), a)
+Part.show(c)
