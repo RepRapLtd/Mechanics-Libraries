@@ -17,8 +17,8 @@ from FreeCAD import Base
 
 radius = 0.5       # The radius of the cylinders
 density = 0.0005    # The expected number of cylindre centres per unit volume
-meanLength = 20  # The mean length of the cylinders
-sdLength = 8      # The standard deviation of the cylinder lengths
+meanLength = 5  # The mean length of the cylinders
+sdLength = 3      # The standard deviation of the cylinder lengths
 
 # The box from the origin in which all the centres of the cylinders will lie
 

@@ -19,7 +19,7 @@ from FreeCAD import Base
 
 #M2
 #flats = 4
-#length = 1.6
+#length = 3
 
 #M2.5
 #flats = 5
@@ -27,8 +27,11 @@ from FreeCAD import Base
 
 #M3
 flats = 5.5
-#length = 2.5
-length = 10
+length = 2.5
+
+#M3 nylock
+#flats = 5.5
+#length=4.3
 
 #M4
 #flats = 7

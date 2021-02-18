@@ -1428,7 +1428,7 @@ class Ui_MainWindow(object):
                 pas2 = helixS[spir]
                 PBA += 1
     
-                if spir <> numberSpires-1:                                   # pas travail normal
+                if spir != numberSpires-1:                                   # pas travail normal
                     pastr = ((radiusS[spir + 1]-radiusS[spir]) / (360/precision))
                 elif spireConeUne == 1:                                      # cone une seule spire
                     pastr = (radius_2_Cone / (360/precision))

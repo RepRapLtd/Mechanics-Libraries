@@ -16,9 +16,9 @@ from FreeCAD import Base
 
 # The box size - the outside dimensions
 
-xBox = 115
-yBox = 55
-zBox = 64
+xBox = 45
+yBox = 30
+zBox = 29
 
 # Box wall thicknesses
 
@@ -26,7 +26,7 @@ thick = 2.5
 
 # Lid thickness
 
-lid = 4
+lid = 3
 
 # Screw self-tapping radius
 

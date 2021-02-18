@@ -1,0 +1,28 @@
+#
+# FreeCAD Python Macro to make M series nuts
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 22 April 2019
+#
+# Licence: GPL
+#
+
+import random
+import Part, FreeCAD, math
+from FreeCAD import Base
+
+
+
+#********************************************************************************
+
+def TestShape():
+ c = Part.makeCylinder(20, 30, Base.Vector(0,0,0), Base.Vector(0,0,1), 360)
+ b = Part.makeBox(30, 40, 50)
+ c = c.fuse(b)
+ c.translate(Base.Vector(-15, -20, -25))
+ return c
+
+b = TestShape()
+Part.show(b)

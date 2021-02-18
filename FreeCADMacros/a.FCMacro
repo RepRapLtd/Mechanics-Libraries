@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+
+# Macro Begin: /home/ensab/rrlOwncloud/RepRapLtd/Engineering/Mechanics-Libraries/FreeCADMacros/a.FCMacro +++++++++++++++++++++++++++++++++++++++++++++++++
+import FreeCAD
+import Part
+
+App.ActiveDocument.addObject("Part::Box","Box")
+App.ActiveDocument.ActiveObject.Label = "Cube"
+App.ActiveDocument.recompute()
+#Gui.SendMsgToActiveView("ViewFit")
+App.ActiveDocument.addObject("Part::Cylinder","Cylinder")
+App.ActiveDocument.ActiveObject.Label = "Cylinder"
+App.ActiveDocument.recompute()
+#Gui.SendMsgToActiveView("ViewFit")
+App.activeDocument().addObject("Part::MultiFuse","Fusion")
+App.activeDocument().Fusion.Shapes = [App.activeDocument().Box,App.activeDocument().Cylinder,]
+#Gui.activeDocument().Box.Visibility=False
+#Gui.activeDocument().Cylinder.Visibility=False
+#Gui.ActiveDocument.Fusion.ShapeColor=Gui.ActiveDocument.Box.ShapeColor
+#Gui.ActiveDocument.Fusion.DisplayMode=Gui.ActiveDocument.Box.DisplayMode
+App.ActiveDocument.recompute()
+FreeCAD.getDocument("Unnamed").getObject("Fusion").Placement = App.Placement(App.Vector(1,0,0),App.Rotation(App.Vector(0,0,1),0))
+FreeCAD.getDocument("Unnamed").getObject("Fusion").Placement = App.Placement(App.Vector(10,0,0),App.Rotation(App.Vector(0,0,1),0))
+# Macro End: /home/ensab/rrlOwncloud/RepRapLtd/Engineering/Mechanics-Libraries/FreeCADMacros/a.FCMacro +++++++++++++++++++++++++++++++++++++++++++++++++

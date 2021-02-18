@@ -1,0 +1,444 @@
+#
+# FreeCAD Python Macro to generate space frame components
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 6 February 2020
+#
+# Licence: GPL
+#
+
+import Part, FreeCAD, math
+from FreeCAD import Base
+from math import *
+
+# User Parameters
+
+# The number of faces of the polygonal beam
+
+polygonN = 6
+
+# The thicknesses of the spars
+
+sparThickness = 3
+
+# The radius of the rods
+
+rodRadius = 1.7
+
+# The face width of the frame
+
+frameWidth = 40
+
+# The width of the chamfers
+
+chamferWidth = rodRadius*3
+
+# The length of the frame
+
+frameLength = 100
+
+# The space between clips.  The first clip is half this from the x=0 edge.
+
+clipSpace = 30
+
+# Add screw holes?
+
+screwHoles = True
+
+# Embed nuts in the screw holes?
+
+embeddedNuts = False
+
+# Holes in the corners?
+
+cornerHoles = True
+
+# Embedded nuts in the corners?
+
+embeddedNutsInCorners = False
+
+# The Y offset for the screw tabs from the centre
+
+tabYOffset = 5
+
+# How far apart printed mating faces have to be to just touch. Also added to small radii to get clearance.
+
+clearance = 0.2
+
+# Usually M3
+
+screwRadius = 1.5
+
+#Square nut cavity
+
+nutXY = 5.8
+nutZ = 2
+nutWalls = 2
+
+# Report useful facts about the structure
+
+report = True
+
+#********************************************************************************
+
+# Fixed and derived values
+
+# All the structure is equilateral triangles
+
+r3 = math.sqrt(3)
+
+clipLength = 7
+clipWidth = 2
+
+halfSparThickness = sparThickness/2
+halfFrameWidth = frameWidth/2
+halfClipWidth = clipWidth/2
+halfClipLength = clipLength/2
+halfClipSpace = clipSpace/2
+
+shortenedFrameWidth = frameWidth - sparThickness
+
+tabBackOff = sparThickness*r3 + clipLength
+tabHeight = 2*tabBackOff
+tab30LineHeight = tabBackOff/r3
+
+#************************************************************************************
+
+# There must be an easier way to make the null set...
+
+def Null():
+ n1 = Part.makeBox(1, 1, 1)
+ n2 = Part.makeBox(1, 1, 1)
+ n2.translate(Base.Vector(10, 10, 10))
+ return(n1.common(n2))
+
+
+# Make a length of blank spar along the X axis with its base at Z=0 and the centre
+# of its end touching the Z axis
+
+def BlankSpar(length):
+ bs = Part.makeBox(length, sparThickness, sparThickness)
+ bs.translate(Base.Vector(0, -halfSparThickness, 0))
+ return bs
+
+
+# Make a spar between two points
+
+def Spar(p0, p1):
+ p = p1.sub(p0)
+ length = math.sqrt(p.x*p.x + p.y*p.y)
+ bs = BlankSpar(length)
+ angle = math.atan2(p.y, p.x)
+ bs.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), angle*180/math.pi)
+ bs.translate(p0)
+ return bs
+
+
+# Screw fastening at the point p and the hole in it
+
+def ScrewFastening(p, square):
+ if square:
+  tab = Part.makeBox(nutXY + 2*nutWalls, nutXY + 2*nutWalls, sparThickness)
+  pt = p.add(Base.Vector(-nutXY/2 - nutWalls, -nutXY/2 - nutWalls, 0))
+  tab.translate(pt)
+ else:
+  tab = Part.makeCylinder(screwRadius + nutWalls, sparThickness)
+  tab.translate(p)
+ return tab
+
+def ScrewHole(p, square, angle):
+ hole = Part.makeCylinder(screwRadius, 3*sparThickness, Base.Vector(0, 0, -sparThickness), Base.Vector(0, 0, 1))
+ if p.y > 0:
+  angle = -angle
+ hole.rotate(Base.Vector(0, 0, 0), Base.Vector(1, 0, 0), angle)
+ hole.translate(p)
+ hCopy = hole.copy()
+ if square:
+  nut = Part.makeBox(nutXY, nutXY, nutZ)
+  pt = p.add(Base.Vector(-nutXY/2, -nutXY/2, (sparThickness - nutZ)/2))
+  nut.translate(pt)
+  hole = hole.fuse(nut)
+ return hCopy, hole
+
+
+# Clips
+
+def Clip(p, male):
+ fc1 = Part.makeBox(clipWidth, clipLength, tabHeight)
+ fc1.translate(Base.Vector(-halfClipWidth, 0, 0))
+ cut1 = Part.makeBox(clipLength*3, clipLength*3, tabHeight*3)
+ cut1.translate(Base.Vector(-clipLength*1.5, 0, 0))
+ cut2 = cut1.copy()
+ cut1.rotate(Base.Vector(0, 0, 0), Base.Vector(1, 0, 0), 30)
+ cut1.translate(Base.Vector(0, 0, tab30LineHeight))
+ cut2.translate(Base.Vector(0, -clipLength*2, 0))
+ cut2.rotate(Base.Vector(0, 0, 0), Base.Vector(1, 0, 0), -60)
+ cut2.translate(Base.Vector(0, clipLength, sparThickness))
+ cut1 = cut1.fuse(cut2)
+ fc1 = fc1.cut(cut1)
+ fc1.translate(Base.Vector(0, halfFrameWidth - r3*sparThickness -clipLength, 0))
+ if male:
+  fc1.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), 180)
+ fc2 = fc1.copy()
+ if male:
+  xShift = clipWidth - clearance
+ else:
+  xShift = clipWidth*2 + clearance
+ fc1.translate(Base.Vector(-xShift, 0, 0))
+ fc2.translate(Base.Vector(xShift, 0, 0))
+ fc1 = fc1.fuse(fc2)
+ fc1.translate(p) 
+ return fc1
+
+def ClipCut(p, male):
+ return Null()
+
+
+
+# The 30 degree chamfer where the edges fit together
+
+def Chamfer30Cut():
+ halfAngle1 = Part.makeBox(frameLength+10, frameWidth, frameWidth)
+ halfAngle1.rotate(Base.Vector(0, 0, 0), Base.Vector(1, 0, 0), 30)
+ halfAngle1.translate(Base.Vector(-5, -halfFrameWidth, 0))
+ halfAngle2 = Part.makeBox(frameLength+10, frameWidth, frameWidth)
+ halfAngle2.rotate(Base.Vector(0, 0, 0), Base.Vector(1, 0, 0), 30)
+ halfAngle2.translate(Base.Vector(-5, -halfFrameWidth, 0))
+ halfAngle2 = halfAngle2.mirror(Base.Vector(0,0,0), Base.Vector(0,1,0))
+ return halfAngle1.fuse(halfAngle2)
+
+
+
+# Make one face of the Frame
+
+def FrameFace():
+
+ # These accumulate shapes fused together to fuse or cut at the end with frame
+
+ triangles = Null()
+ finalCuts = Null()
+ fuseAfterFinalCut = Null()
+ allHoles = Null()
+
+ # The outer rectangle
+
+ p0 = Base.Vector(halfSparThickness, -0.5*frameWidth, 0)
+ p1 = p0.add(Base.Vector(0, frameWidth, 0))
+ frame = Spar(p0, p1)
+ p0 = Base.Vector(0, 0.5*frameWidth - halfSparThickness, 0)
+ p1 = p0.add(Base.Vector(frameLength, 0, 0))
+ frame = frame.fuse(Spar(p0, p1))
+ p0 = Base.Vector(frameLength - halfSparThickness, 0.5*frameWidth, 0)
+ p1 = p0.add(Base.Vector(0, -frameWidth, 0))
+ frame = frame.fuse(Spar(p0, p1))
+ p0 = Base.Vector(frameLength, -0.5*frameWidth + halfSparThickness, 0)
+ p1 = p0.add(Base.Vector(-frameLength, 0, 0))
+ frame = frame.fuse(Spar(p0, p1))
+ 
+ # These vectors are added to increment the triangle edges
+
+ p0 = Base.Vector(halfSparThickness, -0.5*frameWidth + halfSparThickness, 0)
+ pUp = Base.Vector(shortenedFrameWidth/r3, shortenedFrameWidth, 0)
+ pDown = Base.Vector(shortenedFrameWidth/r3, -shortenedFrameWidth, 0)
+
+ # How far do we go in the X direction along the frame?
+
+ if embeddedNuts:
+  xCheck = frameLength - sparThickness - nutXY - nutWalls
+ else:
+  xCheck = frameLength - sparThickness - screwRadius - nutWalls
+
+# Loop, adding triangle edges and other features until we hit the end
+# Note one more edge may be on the end, which will be truncated, if
+# The length is such that there aren't an exact multiple of triangles along the frame.
+
+ count = 1
+ while p0.x < frameLength:
+
+  # The other end of this spar
+
+  p1 = p0.add(pUp)
+
+  if screwHoles:
+
+   # Mess about making sure any screw holes are on an integer
+   # coordinate grid so other things can connect to them. Note that
+   # this means that the screw holes will go out of place relative to the 
+   # triangle edges on very long frames.
+
+   if count < 2:
+    tab = p0.add(p1).multiply(0.5)
+    tab = tab.add(Base.Vector(tabYOffset/r3, tabYOffset, 0))
+    tab = Base.Vector(round(tab.x), tabYOffset, 0)
+   elif count == 2:
+    tab = p0.add(p1).multiply(0.5)
+    tab = tab.add(Base.Vector(tabYOffset/r3, tabYOffset, 0))
+    tab = Base.Vector(round(tab.x), tabYOffset, 0)
+    xIncrement = tab.x - oldUpX
+    if report:
+     print("Mounting holes are ", xIncrement, "mm apart along the length and ", 2*tabYOffset, "mm apart across the width.")
+   else:
+    tab = Base.Vector(oldUpX + xIncrement, tabYOffset, 0)
+   oldUpX = tab.x
+   if tab.x < xCheck:
+    triangles = triangles.fuse(ScrewFastening(tab, embeddedNuts))
+    hole, hNut = ScrewHole(tab, embeddedNuts, 0)
+    allHoles = allHoles.fuse(hole)
+    finalCuts = finalCuts.fuse(hNut)
+
+
+  # The actual triangle leg
+
+  triangles = triangles.fuse(Spar(p0, p1))
+
+  # Now down the other side of the triangle. This is pretty much identical apart from 
+  # some signs to the code just above.
+
+  p0 = p1
+  p1 = p0.add(pDown)
+
+  if screwHoles:
+   if count < 2:
+    tab = p0.add(p1).multiply(0.5)
+    tab = tab.add(Base.Vector(tabYOffset/r3, -tabYOffset, 0))
+    tab = Base.Vector(round(tab.x), -tabYOffset, 0)
+   else:
+    tab = Base.Vector(oldDownX + xIncrement, -tabYOffset, 0)
+   oldDownX = tab.x
+   if tab.x < xCheck:
+    triangles = triangles.fuse(ScrewFastening(tab, embeddedNuts))
+    hole, hNut = ScrewHole(tab, embeddedNuts, 0)
+    allHoles = allHoles.fuse(hole)
+    finalCuts = finalCuts.fuse(hNut)
+
+  triangles = triangles.fuse(Spar(p0, p1))
+
+  p0 = p1
+  count = count + 1
+
+ # Cut the last leg, if need be, so it fits within the frame.
+
+ chop = Part.makeBox(frameLength + 10, 2*frameWidth + 10, sparThickness+10)
+ chop.translate(Base.Vector(frameLength - halfSparThickness, -frameWidth, -1))
+ triangles = triangles.cut(chop)
+
+ frame = frame.fuse(triangles)
+
+ # Maybe add fastenings in the corners
+
+ if cornerHoles:
+   offset = nutXY + nutWalls - halfFrameWidth
+   corner = Base.Vector(nutXY + nutWalls, offset, 0)
+   frame = frame.fuse(ScrewFastening(corner, True))
+   hole, hNut = ScrewHole(corner, embeddedNutsInCorners, 30)
+   allHoles = allHoles.fuse(hole)
+   finalCuts = finalCuts.fuse(hNut)
+   corner = Base.Vector(frameLength - nutXY - nutWalls, offset, 0)
+   frame = frame.fuse(ScrewFastening(corner, True))
+   hole, hNut = ScrewHole(corner, embeddedNutsInCorners, 30)
+   allHoles = allHoles.fuse(hole)
+   finalCuts = finalCuts.fuse(hNut)
+   corner = Base.Vector(frameLength - nutXY - nutWalls, -offset, 0)
+   frame = frame.fuse(ScrewFastening(corner, True))
+   hole, hNut = ScrewHole(corner, embeddedNutsInCorners, 30)
+   allHoles = allHoles.fuse(hole)
+   finalCuts = finalCuts.fuse(hNut)
+   corner = Base.Vector(nutXY + nutWalls, -offset, 0)
+   frame = frame.fuse(ScrewFastening(corner, True))
+   hole, hNut = ScrewHole(corner, embeddedNutsInCorners, 30)
+   allHoles = allHoles.fuse(hole)
+   finalCuts = finalCuts.fuse(hNut)
+
+ # Now the clips
+
+ xCheck = frameLength - halfClipSpace + 1
+ p0 = Base.Vector(halfClipSpace, 0, 0)
+ while p0.x < xCheck:
+  finalCuts = finalCuts.fuse(ClipCut(p0, False))
+  fuseAfterFinalCut = fuseAfterFinalCut.fuse(Clip(p0, False))
+  finalCuts = finalCuts.fuse(ClipCut(p0, True))
+  fuseAfterFinalCut = fuseAfterFinalCut.fuse(Clip(p0, True))
+  p0 = p0.add(Base.Vector(clipSpace, 0, 0))
+
+ # finally cut away the chamfer allowing the frame to form into a triangle.
+
+ finalCuts = finalCuts.fuse(Chamfer30Cut())
+ frame = frame.cut(finalCuts)
+ frame = frame.fuse(fuseAfterFinalCut)
+ Part.show(allHoles)
+ Part.show(frame)
+ return frame
+
+# Work out how far the main face (d1) and the chamfer (d2) are from the origin, which is the centre of rotation
+
+def RadialOffsets(fw, cw):
+ f = 0.5*fw
+ c = 0.5*cw
+ tb = math.tan(math.pi/polygonN)
+ g2 = f + math.sqrt(c*c*(tb*tb + 1))
+ g2 = g2*g2
+ e1 = c*tb
+ d2 = (g2 + c*c - f*f - e1*e1)/(2*e1)
+ d1 = math.sqrt(d2*d2 + c*c - f*f)
+ return (d1, d2)
+
+def RotateAndIntersect(part, number):
+ ang=360/number
+ for i in range(1,number):
+  newPart = part.copy()   
+  newPart.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),i*ang)    
+  part = part.common(newPart)
+ return part
+
+def RotateAndUnion(part, number):
+ ang=360/number
+ for i in range(1,number):
+  newPart = part.copy()   
+  newPart.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),i*ang)    
+  part = part.fuse(newPart)
+ return part
+
+def PolygonalPrism(width, length, offset, faces):
+ f = Part.makeBox(2*width, 2*width, length)
+ f.translate(Base.Vector(-width, -offset, 0))
+ p = RotateAndIntersect(f, faces)
+ return p
+
+def SolidFrame(r):
+ f = PolygonalPrism(frameWidth, frameLength, r[0], polygonN)
+ g = PolygonalPrism(frameWidth, frameLength, r[1], polygonN)
+ g.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),180/polygonN)
+ h = f.common(g) 
+ return h
+
+def Rods(r):
+ c = Part.makeCylinder(rodRadius, frameLength*1.1, Base.Vector(0, 0, 0), Base.Vector(0, 0, 1))
+ yo = r - 2*rodRadius
+ if polygonN %2 is 0:
+  xo = yo*math.sin(math.pi/polygonN)
+  yo = yo*math.cos(math.pi/polygonN)
+ else:
+  xo = 0
+ c.translate(Base.Vector(xo, yo, -frameLength*0.05))
+ r = RotateAndUnion(c, polygonN)
+ return r
+
+def Frame():
+ r = RadialOffsets(frameWidth, chamferWidth)
+ f = SolidFrame(r)
+ rods = Rods(r[1])
+ s = (r[0] - sparThickness, r[1] - sparThickness - 2*rodRadius)
+ h = SolidFrame(s)
+ Part.show(h)
+ Part.show(f)
+ fr = f.cut(rods)
+ fr = fr.cut(h)
+ return fr
+
+fr = Frame()
+Part.show(fr)
+
+
+
