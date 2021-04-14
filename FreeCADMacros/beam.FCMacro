@@ -25,7 +25,7 @@ sparThickness = 3
 
 # The radius of the rods
 
-rodRadius = 1.7
+rodRadius = 1.5
 
 # The face width of the frame
 
@@ -87,7 +87,7 @@ report = True
 
 # All the structure is equilateral triangles
 
-r3 = math.sqrt(3)
+r3 = sqrt(3)
 
 clipLength = 7
 clipWidth = 2
@@ -128,10 +128,10 @@ def BlankSpar(length):
 
 def Spar(p0, p1):
  p = p1.sub(p0)
- length = math.sqrt(p.x*p.x + p.y*p.y)
+ length = sqrt(p.x*p.x + p.y*p.y)
  bs = BlankSpar(length)
- angle = math.atan2(p.y, p.x)
- bs.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), angle*180/math.pi)
+ angle = atan2(p.y, p.x)
+ bs.rotate(Base.Vector(0, 0, 0), Base.Vector(0, 0, 1), angle*180/pi)
  bs.translate(p0)
  return bs
 
@@ -376,12 +376,12 @@ def FrameFace():
 def RadialOffsets(fw, cw):
  f = 0.5*fw
  c = 0.5*cw
- tb = math.tan(math.pi/polygonN)
- g2 = f + math.sqrt(c*c*(tb*tb + 1))
+ tb = tan(pi/polygonN)
+ g2 = f + sqrt(c*c*(tb*tb + 1))
  g2 = g2*g2
  e1 = c*tb
  d2 = (g2 + c*c - f*f - e1*e1)/(2*e1)
- d1 = math.sqrt(d2*d2 + c*c - f*f)
+ d1 = sqrt(d2*d2 + c*c - f*f)
  return (d1, d2)
 
 def RotateAndIntersect(part, number):
@@ -417,8 +417,8 @@ def Rods(r):
  c = Part.makeCylinder(rodRadius, frameLength*1.1, Base.Vector(0, 0, 0), Base.Vector(0, 0, 1))
  yo = r - 2*rodRadius
  if polygonN %2 is 0:
-  xo = yo*math.sin(math.pi/polygonN)
-  yo = yo*math.cos(math.pi/polygonN)
+  xo = yo*sin(pi/polygonN)
+  yo = yo*cos(pi/polygonN)
  else:
   xo = 0
  c.translate(Base.Vector(xo, yo, -frameLength*0.05))
@@ -427,12 +427,16 @@ def Rods(r):
 
 def Frame():
  r = RadialOffsets(frameWidth, chamferWidth)
+ print(r)
  f = SolidFrame(r)
  rods = Rods(r[1])
- s = (r[0] - sparThickness, r[1] - sparThickness - 2*rodRadius)
+ p = r[0] - sparThickness
+ q = r[1] - sparThickness - 2*rodRadius
+ s = (p, q)
+ print(s)
  h = SolidFrame(s)
- Part.show(h)
- Part.show(f)
+ #Part.show(f)
+ #Part.show(h)
  fr = f.cut(rods)
  fr = fr.cut(h)
  return fr

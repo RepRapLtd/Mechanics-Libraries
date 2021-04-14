@@ -1,4 +1,3 @@
-#
 # FreeCAD Python Macro to make M series nuts
 #
 # Adrian Bowyer
@@ -15,35 +14,45 @@ from FreeCAD import Base
 
 # Parameters
 
-#NB lengths are slightly longer than the standard
-
 #M2
-#flats = 4
-#length = 3
+#NutHoleWidth = 4
+#depth = 1.6
+#NutName= "M2 Nut Hole"
 
 #M2.5
-#flats = 5
-#length = 2
+#NutHoleWidth = 5
+#depth = 2
+#NutName= "M2.5 Nut Hole"
 
 #M3
-flats = 5.5
-length = 2.5
+NutHoleWidth = 5.6
+depth = 6
+NutName= "M3 Nut Hole"
 
 #M3 nylock
-#flats = 5.5
-#length=4.3
+#NutHoleWidth = 5.5
+#depth=4
+#NutName= "M3 Nylock Nut Hole"
 
 #M4
-#flats = 7
-#length = 3.25
+#NutHoleWidth = 7
+#depth = 3
+#NutName= "M4 Nut Hole"
 
 #M5
-#flats = 8
-#length = 5
+#NutHoleWidth = 8.2
+#depth = 3.7
+#NutName= "M5 Nut Hole"
 
 #M6
-#flats = 10
-#length = 5.25
+#NutHoleWidth = 10
+#depth = 4.8
+#NutName= "M6 Nut Hole"
+
+#M8 fine
+#NutHoleWidth = 13
+#depth = 6.2
+#NutName= "M8 Nut Hole"
 
 
 #********************************************************************************
@@ -61,5 +70,7 @@ def hexagon(r, l):
  a = c.cut(a)
  return a
 
-b = hexagon(flats/2, length)
-Part.show(b)
+b = hexagon(NutHoleWidth/2, depth)
+obj=App.ActiveDocument.addObject('Part::Feature',NutName)
+obj.Shape=b
+#Part.show(b)
