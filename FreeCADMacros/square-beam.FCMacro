@@ -9,6 +9,10 @@
 # Licence: GPL
 #
 
+#--------------------------------------------------------------------------------------------------------------
+
+# Set the values you want in here. All dimensions are in mm.
+
 # The overall size of the beam. Length must be the biggest dimension.
 # Note the beam will be reoriented to make the Z direction the larger of 
 # width and height, as that is the orientation in which it must be printed.
@@ -28,7 +32,7 @@ holes = 2.8
 
 #--------------------------------------------------------------------------------------------------------------
 
-# Internal parameters. Change these to get interesting, but incorrect, results.
+# Internal parameters. Change these to get interesting, but possibly incorrect, results.
 
 angleFactor = 0.8
 screwHoleCount = 12
@@ -40,7 +44,7 @@ from FreeCAD import Base
 import math as maths
 import random
 
-# There must be an easier way...
+# There must be an easier way to make a null set...
 # See: https://forum.freecadweb.org/viewtopic.php?f=22&t=35237&p=522227#p522227
 
 def NullSet():
@@ -48,7 +52,7 @@ def NullSet():
  a.translate(Base.Vector(10, 10, 10))
  return a.common(Part.makeBox(1, 1, 1))
 
-# Create a diagonal on a face (0 ... 5) of a cuboid.
+# Create a diagonal of thickness t on a face (0 ... 5) of cuboid (x, y, z).
 
 def Diagonal(x, y, z, t, face):
  if face == 0:
@@ -95,9 +99,9 @@ def Diagonal(x, y, z, t, face):
   return b
  print("Diagonal(x, y, z, t, face) - face must be in [0, 5]")
 
-# Create a sungle beam box. If diagonals is False, just the cuboid is created.
-# If it's true the cuboid is decomposed into tetrahedra. If bothEnds is false the
-# +x end rectangle is ommitted. If endDiagonals is flase, the -x and +x diagonals are ommitted.
+# Create a single beam box. If diagonals is False, just the cuboid is created.
+# If it's true the cuboid is decomposed into tetrahedra. If bothEnds is False the
+# +x end rectangle is omitted. If endDiagonals is false, the -x and +x diagonals are omitted.
 
 def OutlineBox(x, y, z, t, diagonals, bothEnds, endDiagonals):
  xb = Part.makeBox(x + 2, y - 2*t, z - 2*t)
@@ -125,7 +129,7 @@ def OutlineBox(x, y, z, t, diagonals, bothEnds, endDiagonals):
   u = u.fuse(Diagonal(x, y, z, t, 5).common(v))
  return u
 
-# Create a ring of screw holes with axes in the z direction. Note the small
+# Create a ring of screw holes with their axes in the z direction. Note the small
 # random purturbations on the radii. Without this the ScrewHoles() function
 # below can't form the union of all the cylinders as there are too many tangential
 # coincidences. This is very nasty, but, hey, B-Rep modellers...
@@ -135,10 +139,13 @@ def ZScrewHolePattern(y, z, t, d):
  sh = NullSet()
  h = y - screwGap*d
  pitchRadius = 0.5*round(2.0*(h/2 + screwPitch*d + y/2))
+ trans = Base.Vector(pitchRadius, y/2, -0.1)
+ centre = Base.Vector(y/2, y/2, 0)
+ axis = Base.Vector(0, 0, 1)
  for s in range(screwHoleCount):
   cyl = Part.makeCylinder(d/2 + random.uniform(-0.01, 0.01), z + 0.2)
-  cyl.translate(Base.Vector(pitchRadius, y/2, -0.1))
-  cyl.rotate(Base.Vector(y/2,y/2,0),Base.Vector(0,0,1),s*360/screwHoleCount)
+  cyl.translate(trans)
+  cyl.rotate(centre, axis, s*360/screwHoleCount)
   sh = sh.fuse(cyl)
  return (sh, pitchRadius)
 
@@ -152,10 +159,11 @@ def ScrewHoles(y, z, t, d):
  sh = NullSet()
  sh = sh.fuse(zhp)
  zhp = ZScrewHolePattern(y, y, t, d)[0]
- zhp.translate(Base.Vector(0,0,(z - y)/2))
- zhp.rotate(Base.Vector(y/2,y/2,z/2),Base.Vector(1,0,0),90)
+ zhp.translate(Base.Vector(0, 0, (z - y)/2))
+ centre = Base.Vector(y/2, y/2, z/2)
+ zhp.rotate(centre, Base.Vector(1, 0, 0), 90)
  sh = sh.fuse(zhp)
- zhp.rotate(Base.Vector(y/2,y/2,z/2),Base.Vector(0,0,1),90)
+ zhp.rotate(centre, Base.Vector(0, 0, 1), 90)
  sh = sh.fuse(zhp)
  return sh
 
@@ -167,9 +175,10 @@ def CentalHoles(y, z, d):
  cyl = Part.makeCylinder(h/2, z + 2)
  cyl.translate(Base.Vector(y/2, y/2, -1))
  ch = ch.fuse(cyl)
- cyl.rotate(Base.Vector(y/2, y/2, z/2),Base.Vector(1,0,0),-90)
+ centre = Base.Vector(y/2, y/2, z/2)
+ cyl.rotate(centre, Base.Vector(1, 0, 0), -90)
  ch = ch.fuse(cyl)
- cyl.rotate(Base.Vector(y/2, y/2, z/2),Base.Vector(0,0,1),90)
+ cyl.rotate(centre, Base.Vector(0, 0, 1), 90)
  ch = ch.fuse(cyl)
  return ch
 
