@@ -1,0 +1,34 @@
+#
+# FreeCAD Python Macro to investigate moving transforms down to the leaves.
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 4 August 2021
+#
+# Licence: GPL
+#
+
+
+#https://wiki.freecadweb.org/Power_users_hub
+
+import random
+import Part, FreeCAD, math
+from FreeCAD import Base
+import copy
+
+
+
+'''
+a = Part.makeCylinder(5,20, Base.Vector(0,0,0), Base.Vector(0,0,1),360)
+b = copy.deepcopy(a)
+pl = FreeCAD.Placement()
+pl.move(FreeCAD.Vector(4,0,0))
+a.Placement = pl
+c = a.fuse(b)
+Part.show(c)
+'''
+for v in FreeCAD.ActiveDocument.Objects:
+ print(v.Placement)
+
+

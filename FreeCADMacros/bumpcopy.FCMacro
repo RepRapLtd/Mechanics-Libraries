@@ -1,5 +1,5 @@
 from FreeCAD import Base
-number=12
+number=3
 ang=360/number
 sel = FreeCADGui.Selection.getSelection()
 sel = sel[0]
