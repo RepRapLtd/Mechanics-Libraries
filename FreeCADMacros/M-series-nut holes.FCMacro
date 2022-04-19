@@ -40,9 +40,9 @@ from FreeCAD import Base
 #NutName= "M4 Nut Hole"
 
 #M5
-NutHoleWidth = 8.2
-depth = 4.2 #3.7 actual
-NutName= "M5 Nut Hole"
+NutHoleWidth = 8.4
+depth = 10 #3.7 actual
+NutName= "M5 Nut"
 
 #M6
 #NutHoleWidth = 10

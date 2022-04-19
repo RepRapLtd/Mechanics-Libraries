@@ -1,0 +1,65 @@
+#
+# FreeCAD Python Macro to make a custom screw thread.
+#
+# Adrian Bowyer
+# reprapltd.com
+#
+# 19 April 2022
+#
+# Licence: GPL
+#
+
+#--------------------------------------------------------------------------------------------------------------
+
+# Set the values you want in here. All dimensions are in mm.
+
+
+turns = 10
+pitch = 0.8
+innerD = 11.5
+outerD=13
+flat = 0.2
+
+#--------------------------------------------------------------------------------------------------------------
+
+# Internal parameters. Change these to get interesting, but possibly incorrect, results.
+
+angleFactor = 0.8
+screwGap = 5
+screwPitch = 1.5
+
+import Part, FreeCAD
+from FreeCAD import Base
+import math as maths
+
+def MakeThread():
+ r = innerD/2.0
+ R = outerD/2.0
+
+ edges = []
+ p0 = (r*0.9, 0.0, 0.0)
+ p1 = (r, 0.0, 0.0)
+ edges.append(Part.makeLine(p0, p1))
+ p2 = (R, 0.0, (pitch-flat)/2.0)
+ edges.append(Part.makeLine(p1, p2))
+ p3 = (R, 0.0, (pitch+flat)/2.0)
+ edges.append(Part.makeLine(p2, p3))
+ p4 = (r, 0.0, pitch)
+ edges.append(Part.makeLine(p3, p4))
+ p5 = (r*0.9, 0.0, pitch)
+ edges.append(Part.makeLine(p4, p5))
+ edges.append(Part.makeLine(p5, p0))
+ profile = Part.Wire(edges)
+
+ helix = Part.makeHelix(pitch,(turns+2)*pitch,r)
+ makeSolid = True
+ isFrenet = True
+ thread = Part.Wire(helix).makePipeShell([profile], makeSolid, isFrenet)
+ thread.translate(Base.Vector(0, 0, -pitch))
+ c = Part.makeCylinder(r*0.95, turns*pitch)
+ #Part.show(c)
+ thread = thread.fuse(c)
+ return thread
+
+t = MakeThread()
+Part.show(t)
