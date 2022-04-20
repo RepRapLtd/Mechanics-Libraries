@@ -13,20 +13,17 @@
 
 # Set the values you want in here. All dimensions are in mm.
 
-
-turns = 10
+turns = 20
 pitch = 0.8
-innerD = 11.5
-outerD=13
+innerD = 11.7
+outerD=13.4
 flat = 0.2
 
 #--------------------------------------------------------------------------------------------------------------
 
 # Internal parameters. Change these to get interesting, but possibly incorrect, results.
 
-angleFactor = 0.8
-screwGap = 5
-screwPitch = 1.5
+rFrac = 0.3
 
 import Part, FreeCAD
 from FreeCAD import Base
@@ -35,30 +32,35 @@ import math as maths
 def MakeThread():
  r = innerD/2.0
  R = outerD/2.0
-
+ t = R - r
+ H = (pitch - 2*flat)/2.0
+ h = rFrac*flat
+ tRatio = t/H
+ mr = h*tRatio
+ 
  edges = []
- p0 = (r*0.9, 0.0, 0.0)
- p1 = (r, 0.0, 0.0)
+ p0 = (-mr, 0.0, -h)
+ p1 = (t, 0.0, H)
  edges.append(Part.makeLine(p0, p1))
- p2 = (R, 0.0, (pitch-flat)/2.0)
+ p2 = (t, 0.0, H+flat)
  edges.append(Part.makeLine(p1, p2))
- p3 = (R, 0.0, (pitch+flat)/2.0)
+ p3 = (-mr, 0.0, 2.0*H + flat + h)
  edges.append(Part.makeLine(p2, p3))
- p4 = (r, 0.0, pitch)
- edges.append(Part.makeLine(p3, p4))
- p5 = (r*0.9, 0.0, pitch)
- edges.append(Part.makeLine(p4, p5))
- edges.append(Part.makeLine(p5, p0))
+ edges.append(Part.makeLine(p3, p0))
  profile = Part.Wire(edges)
+ profile.translate(Base.Vector(r, 0.0, 0.0))
 
  helix = Part.makeHelix(pitch,(turns+2)*pitch,r)
  makeSolid = True
  isFrenet = True
  thread = Part.Wire(helix).makePipeShell([profile], makeSolid, isFrenet)
  thread.translate(Base.Vector(0, 0, -pitch))
- c = Part.makeCylinder(r*0.95, turns*pitch)
- #Part.show(c)
+ c = Part.makeCylinder(r, 2*turns*pitch)
+ c.translate(Base.Vector(0, 0, -0.5*turns*pitch))
  thread = thread.fuse(c)
+ chopBox = Part.makeBox(2.0*outerD, 2.0*outerD, turns*pitch)
+ chopBox.translate(Base.Vector(-outerD, -outerD, 0.0))
+ thread = thread.common(chopBox)
  return thread
 
 t = MakeThread()
