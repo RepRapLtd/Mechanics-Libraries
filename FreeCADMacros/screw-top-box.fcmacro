@@ -16,9 +16,9 @@ from FreeCAD import Base
 
 # The box size - the outside dimensions
 
-xBox = 45
-yBox = 30
-zBox = 29
+xBox = 55
+yBox = 67
+zBox = 23
 
 # Box wall thicknesses
 
@@ -26,23 +26,23 @@ thick = 2.5
 
 # Lid thickness
 
-lid = 3
+lid = 2.5
 
 # Screw self-tapping radius
 
-screwHoleR = 1.3
+screwHoleR = 1
 
 # Screw clearance radius
 
-screwClearR = 1.8
+screwClearR = 1.2
 
 #Screw length
 
-screwL = 10
+screwL = 8
 
 # Screw head radius (i.e. outer radius of countersink cone)
 
-screwHR = 3
+screwHR = 2
 
 #********************************************************************************
 

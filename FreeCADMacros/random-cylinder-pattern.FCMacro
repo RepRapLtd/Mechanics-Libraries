@@ -1,5 +1,5 @@
 #
-# FreeCAD Python Macro to generate a random pattern of cylinders in a cuboid volume
+# FreeCAD Python Macro to generate a Gaussian random pattern of cylinders in a cuboid volume
 #
 # Adrian Bowyer
 # reprapltd.com
@@ -10,15 +10,15 @@
 #
 
 import random
-import Part, FreeCAD, math
 from FreeCAD import Base
 
 # Parameters
 
-radius = 0.5       # The radius of the cylinders
-density = 0.0005    # The expected number of cylindre centres per unit volume
-meanLength = 5  # The mean length of the cylinders
-sdLength = 3      # The standard deviation of the cylinder lengths
+radius = 0.5         # The radius of the cylinders
+meanDensity = 0.0005 # The expected number of cylinder centres per unit volume (1 mm^3)
+sdDensity = 0.0001   # The standard deviation in the number of cylinder centres per unit volume 
+meanLength = 20      # The mean length of the cylinders (mm)
+sdLength = 5         # The standard deviation of the cylinder lengths (mm)
 
 # The box from the origin in which all the centres of the cylinders will lie
 
@@ -38,20 +38,20 @@ def RanBoxPoint():
 
 
 # Wrapper function for the Gaussian distribution
-# (prevents negative and zero lengths)
+# (prevents negative and zero values)
 
-def RanGaussianLength():
+def RanPositiveGaussian(mean, sd):
  g = -1
  while (g <= 0.0):
-  g = random.gauss(meanLength, sdLength)
+  g = random.gauss(mean, sd)
  return g
 
 
 # Generate a point from the uniform distribution
 # on the surface of the unit ball by rejection sampling
-# from the unit cube
+# from the surrounding cube.
 
-def RanDir():
+def RanDirection():
  r2 = 2
  while (r2 > 1):
   x = random.uniform(-1, 1)
@@ -63,10 +63,10 @@ def RanDir():
  return v
 
 
-# Make a single cylinder (fibre)
+# Make a single cylinder
 # This assumes that the axis is a unit vector
 
-def Fibre(r, l, centre, axis):
+def Cylinder(r, l, centre, axis):
  c = Part.makeCylinder(r,l,centre,axis,360)
  c.translate(axis.multiply(-l/2))
  return c
@@ -74,8 +74,8 @@ def Fibre(r, l, centre, axis):
 # The pattern is the union of all the cylinders
 
 volume = xBox*yBox*zBox
-number = volume*density - 2
-f = Fibre(radius,RanGaussianLength(),RanBoxPoint(),RanDir())
-for i in range(0,int(number)+1):
- f = f.fuse(Fibre(radius,RanGaussianLength(),RanBoxPoint(),RanDir()))
-Part.show(f)
+number = int(RanPositiveGaussian(volume*meanDensity, volume*sdDensity))
+c = Cylinder(radius, RanPositiveGaussian(meanLength, sdLength),RanBoxPoint(), RanDirection())
+for i in range(0,number):
+ c = c.fuse(Cylinder(radius, RanPositiveGaussian(meanLength, sdLength), RanBoxPoint(), RanDirection()))
+Part.show(c)
