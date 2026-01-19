@@ -18,7 +18,7 @@ from FreeCAD import Base
 
 xBox = 115
 yBox = 115
-zBox = 1000
+zBox = 70
 
 # Box wall thicknesses
 
